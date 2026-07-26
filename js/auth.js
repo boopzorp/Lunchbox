@@ -56,11 +56,11 @@ class AuthEngine {
               if (docSnap.exists) {
                 console.log("🔥 Loaded user vault from Cloud Firestore");
                 window.store.setState(docSnap.data());
-              } else {
                 // First login for brand new account: initialize with clean DEFAULT_DATA (1 sample notebook)
                 console.log("✨ Initializing fresh vault for new account");
                 window.store.resetToDefault();
-                await docRef.set(window.store.data);
+                const cleanInitialData = JSON.parse(JSON.stringify(window.store.data));
+                await docRef.set(cleanInitialData);
               }
               
               if (window.stickyManager && Notification.permission === 'granted') {

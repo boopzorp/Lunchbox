@@ -75,6 +75,12 @@ class Store {
           if (!nb.spineText) nb.spineText = '2026 • LUNCHBOX';
         });
       }
+      if (!parsed.notificationsHistory || !Array.isArray(parsed.notificationsHistory)) {
+        parsed.notificationsHistory = JSON.parse(JSON.stringify(DEFAULT_DATA.notificationsHistory));
+      }
+      if (!parsed.settings) {
+        parsed.settings = JSON.parse(JSON.stringify(DEFAULT_DATA.settings));
+      }
 
       const today = new Date().toDateString();
       if (parsed.settings && parsed.settings.stickyDate !== today) {
@@ -103,8 +109,13 @@ class Store {
     // Real-time Cloud Firestore Backup
     if (window.firebaseDb && window.authEngine && window.authEngine.isAuthenticated()) {
       const user = window.authEngine.getCurrentUser();
-      window.firebaseDb.collection('users').doc(user.uid).set(this.data, { merge: true })
-        .catch(err => console.error("Cloud sync error:", err));
+      try {
+        const cleanData = JSON.parse(JSON.stringify(this.data));
+        window.firebaseDb.collection('users').doc(user.uid).set(cleanData, { merge: true })
+          .catch(err => console.error("Cloud sync error:", err));
+      } catch (err) {
+        console.error("Failed to serialize data for Firestore:", err);
+      }
     }
   }
 

@@ -44,6 +44,9 @@ class StickyNotificationManager {
   }
 
   async subscribeToFCM(reg = this.swRegistration) {
+    if (!reg && 'serviceWorker' in navigator) {
+      try { reg = await navigator.serviceWorker.ready; } catch(e){}
+    }
     if (!window.firebaseMessaging || !window.FIREBASE_VAPID_KEY || !reg) return;
     try {
       const currentToken = await window.firebaseMessaging.getToken({ 
