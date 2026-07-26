@@ -673,8 +673,8 @@ class App {
         <!-- TOP LANDING NAVBAR -->
         <nav class="landing-nav" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 0 24px 0; border-bottom: 1px solid var(--border-subtle); margin-bottom: 30px;">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 28px;">🍱</span>
-            <span style="font-family: var(--font-heading); font-size: 22px; font-weight: 800; letter-spacing: -0.5px; color: var(--text-main);">Lunchbox</span>
+            <img src="icon.png" alt="Lunchbox Icon" style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; box-shadow: var(--shadow-sm);" />
+            <span style="font-family: var(--font-brand); font-size: 34px; font-weight: 700; color: var(--text-main);">Lunchbox</span>
           </div>
 
           <div style="display: flex; align-items: center; gap: 8px;">

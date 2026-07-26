@@ -43,6 +43,7 @@
   --washi-mint: rgba(186, 240, 209, 0.8);
 
   /* Typography */
+  --font-brand: 'Caveat', cursive, sans-serif;
   --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Plus Jakarta Sans", sans-serif;
   
