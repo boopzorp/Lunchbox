@@ -64,7 +64,7 @@ class StickyNotificationManager {
     }
   }
 
-  sendSystemNotification(title, body, requireInteraction = false) {
+  sendSystemNotification(title, body, requireInteraction = false, customTag = null) {
     if (!('Notification' in window)) {
       console.warn("Web Notifications API is not supported in this browser environment.");
       return;
@@ -72,9 +72,9 @@ class StickyNotificationManager {
 
     const options = {
       body: body,
-      icon: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=128&auto=format&fit=crop&q=80',
-      badge: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=128&auto=format&fit=crop&q=80',
-      tag: 'lunchbox-nudge-' + Date.now(),
+      icon: 'icon.png',
+      badge: 'icon.png',
+      tag: customTag || (requireInteraction ? 'lunchbox-sticky-persistent' : ('lunchbox-nudge-' + Date.now())),
       requireInteraction: requireInteraction,
       renotify: true,
       silent: false,
