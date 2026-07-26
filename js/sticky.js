@@ -58,16 +58,36 @@ class StickyNotificationManager {
   }
 
   checkSystemPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-      document.addEventListener('click', () => {
-        if (Notification.permission === 'default') {
-          Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-              this.sendSystemNotification("🍱 Lunchbox Linked to OS", "Sticky remembrance is now active on your system desktop and mobile notifications!");
-            }
-          });
-        }
-      }, { once: true });
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        this.ensurePersistentNotification();
+      } else if (Notification.permission === 'default') {
+        document.addEventListener('click', () => {
+          if (Notification.permission === 'default') {
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                this.ensurePersistentNotification();
+              }
+            });
+          }
+        }, { once: true });
+      }
+    }
+  }
+
+  ensurePersistentNotification() {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const rem = Math.ceil(Math.max(0, this.requiredSeconds - this.activeSeconds) / 60);
+      const text = this.isUnlocked ?
+        "Your remembrance vault is pinned. Tap anytime to jump back in!" :
+        `Don't forget your lunchbox! ${rem} mindful min remaining today.`;
+
+      this.sendSystemNotification(
+        "🍱 Lunchbox Vault — Always Active",
+        text,
+        true,
+        "lunchbox-sticky-persistent"
+      );
     }
   }
 
