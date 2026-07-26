@@ -43,13 +43,16 @@ class StickyNotificationManager {
     }
   }
 
-  async subscribeToFCM(reg = this.swRegistration) {
-    if (this.isSyncingFCM || this.fcmTokenSynced) return;
+  async subscribeToFCM(reg = this.swRegistration, forceToast = false) {
+    if (this.isSyncingFCM || (this.fcmTokenSynced && !forceToast)) return;
     if (!reg && 'serviceWorker' in navigator) {
       try { reg = await navigator.serviceWorker.ready; } catch(e){}
     }
     if (!window.firebaseMessaging || !window.FIREBASE_VAPID_KEY || !reg) {
       console.warn("Cannot subscribe to FCM yet: missing messaging, VAPID key, or SW reg.");
+      if (forceToast && window.notificationEngine) {
+        window.notificationEngine.showToast('⚠️', 'FCM Sync Failed', 'Firebase messaging SDK or Service Worker is not ready.');
+      }
       return;
     }
     this.isSyncingFCM = true;
@@ -61,7 +64,6 @@ class StickyNotificationManager {
       
       if (currentToken) {
         console.log('✅ FCM Push Token Registered:', currentToken);
-        // Save token to user document in Firestore so Cloud Functions can push to it
         if (window.authEngine && window.authEngine.isAuthenticated() && window.firebaseDb) {
           const user = window.authEngine.getCurrentUser();
           try {
@@ -71,17 +73,31 @@ class StickyNotificationManager {
             );
             console.log("🔥 Successfully synced FCM token to Firestore for user:", user.uid);
             this.fcmTokenSynced = true;
+            if (forceToast && window.notificationEngine) {
+              window.notificationEngine.showToast('🔥', 'Push Token Synced!', 'FCM token is now live in your Firestore user document.');
+            }
           } catch(dbErr) {
             console.error("Failed to save FCM token to Firestore:", dbErr);
+            if (forceToast && window.notificationEngine) {
+              window.notificationEngine.showToast('⚠️', 'Firestore Save Failed', dbErr.message);
+            }
           }
         } else {
           console.warn("FCM token generated, but user not authenticated yet. Will retry on login.");
+          if (forceToast && window.notificationEngine) {
+            window.notificationEngine.showToast('ℹ️', 'Token Generated', 'Please sign in to save your push token to Firestore.');
+          }
+        }
+      } else {
+        console.warn("No FCM push token received from Firebase.");
+        if (forceToast && window.notificationEngine) {
+          window.notificationEngine.showToast('⚠️', 'No Token', 'Firebase returned an empty push token.');
         }
       }
     } catch (err) {
       console.warn('Could not register FCM token:', err);
       if (window.notificationEngine) {
-        window.notificationEngine.showToast('⚠️', 'Push Notification Notice', err.message || 'Could not register push token');
+        window.notificationEngine.showToast('⚠️', 'Push Notification Error', err.message || 'Could not register push token');
       }
     } finally {
       this.isSyncingFCM = false;
@@ -339,9 +355,10 @@ class StickyNotificationManager {
           </div>
           <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <span style="font-family: monospace; font-size: 14px; font-weight: 700; color: #34C759;">⏳ ${mins}:${secs} remaining</span>
-            <div style="display: flex; gap: 6px;">
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
               <button class="btn btn-sm" style="background: rgba(255,255,255,0.15); color: #fff; font-size: 12px;" onclick="window.notificationEngine?.triggerNotebookNudge()">🔔 Notebook Nudge</button>
               <button class="btn btn-sm" style="background: #fff; color: #1D1D1F; font-weight: 700; font-size: 12px;" onclick="window.stickyManager.enableOSNotifications()">📌 Link System</button>
+              <button class="btn btn-sm" style="background: #34C759; color: #fff; font-weight: 700; font-size: 12px;" onclick="window.stickyManager.subscribeToFCM(null, true)">🚀 Force Sync Token</button>
             </div>
           </div>
         </div>
