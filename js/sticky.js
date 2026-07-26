@@ -139,14 +139,19 @@ class StickyNotificationManager {
       }
     }, 1000);
 
-    // Send OS system notification if tab is backgrounded before 5 minutes are completed!
+    // Send/maintain persistent OS system notification (always non-dismissable)
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && !this.isUnlocked && !this.systemNotificationSent) {
-        const rem = Math.ceil((this.requiredSeconds - this.activeSeconds) / 60);
+      if (document.visibilityState === 'hidden') {
+        const rem = Math.ceil(Math.max(0, this.requiredSeconds - this.activeSeconds) / 60);
+        const text = this.isUnlocked ?
+          "Your remembrance vault is pinned. Tap anytime to jump back in!" :
+          `Don't forget your lunchbox! ${rem} mindful min remaining today.`;
+        
         this.sendSystemNotification(
-          "📌 Lunchbox Reminder Sticky",
-          `Don't forget your lunchbox! You still have ${rem} mindful min remaining today to clear this sticky OS notification.`,
-          true
+          "🍱 Lunchbox Vault — Always Active",
+          text,
+          true,
+          "lunchbox-sticky-persistent"
         );
         this.systemNotificationSent = true;
         this.saveState();
@@ -164,16 +169,17 @@ class StickyNotificationManager {
       window.notificationEngine.playSound('pop');
     }
 
-    // Send triumphant OS System Notification!
+    // Keep persistent notification pinned all the time (requireInteraction: true)
     this.sendSystemNotification(
-      "✨ Lunchbox Vault Unlocked!",
-      "You have spent 5 mindful minutes inside your remembrance journals today! Sticky notifications removed.",
-      false
+      "🍱 Lunchbox Vault — Always Active",
+      "5 mindful minutes completed today! Your remembrance vault remains pinned so you can jump back in anytime.",
+      true,
+      "lunchbox-sticky-persistent"
     );
 
     // Show inside-app toast
     if (window.notificationEngine) {
-      window.notificationEngine.showToast('🍱', 'Sticky Lock Removed!', 'You spent 5 mindful minutes inside Lunchbox today!');
+      window.notificationEngine.showToast('🍱', 'Mindful Goal Unlocked!', 'You spent 5 mindful minutes inside Lunchbox today!');
     }
   }
 
