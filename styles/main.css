@@ -1,0 +1,192 @@
+/**
+ * Lunchbox Core Design System — Ultra-Minimal iPadOS "Paper" & Mobile Responsive Edition
+ * Zen full-screen desk, 3D carousel lineups, page turn gestures/curls, and OS notification styling.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap');
+
+:root {
+  /* Color Palette - Zen Studio Desk & Paper */
+  --bg-app: #FAF8F5; /* Warm paper cream desk */
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-palette: rgba(255, 255, 255, 0.88);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  
+  --text-main: #1D1D1F;
+  --text-muted: #6E6E73;
+  --text-subtle: #86868B;
+  
+  /* Hobonichi Cloth Spine Colors */
+  --spine-green: #1E4D2B;
+  --spine-terracotta: #A83A2A;
+  --spine-yellow: #B8860B;
+  --spine-slate: #1A4E78;
+  --spine-lavender: #5C3A82;
+
+  /* Pastel Sketchbook Page Colors */
+  --color-terracotta: #FF6B57;
+  --color-terracotta-bg: #FFF0ED;
+  --color-yellow: #F4B800;
+  --color-yellow-bg: #FEF9E7;
+  --color-sage: #34C759;
+  --color-sage-bg: #E8F9EE;
+  --color-slate: #0071E3;
+  --color-slate-bg: #E6F1FC;
+  --color-lavender: #AF52DE;
+  --color-lavender-bg: #F5EBFB;
+  
+  /* Washi Tape Colors */
+  --washi-yellow: rgba(247, 224, 126, 0.8);
+  --washi-lavender: rgba(220, 195, 245, 0.8);
+  --washi-mint: rgba(186, 240, 209, 0.8);
+
+  /* Typography */
+  --font-heading: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Plus Jakarta Sans", sans-serif;
+  
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+  
+  /* iPadOS Frosted Glass Shadows */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.12);
+  --shadow-spread: 0 24px 70px rgba(0, 0, 0, 0.16);
+  --shadow-float: 0 20px 50px rgba(0, 0, 0, 0.2);
+  
+  --transition-fast: 0.15s ease-out;
+  --transition-smooth: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme="dark"] {
+  --bg-app: #16181C;
+  --bg-surface: #24272E;
+  --bg-surface-elevated: #2E323B;
+  --bg-palette: rgba(36, 39, 46, 0.88);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-main: #F5F5F7;
+  --text-muted: #A1A1A6;
+  --text-subtle: #6E6E73;
+  --spine-green: #27663A;
+  --spine-terracotta: #C94836;
+  --spine-yellow: #D19A15;
+  --spine-slate: #246AA3;
+  --spine-lavender: #764CA6;
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.55);
+  --shadow-spread: 0 24px 70px rgba(0, 0, 0, 0.7);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Full-screen zen workspace */
+  -webkit-font-smoothing: antialiased;
+  touch-action: pan-y; /* Enable smooth touch interaction */
+}
+
+/* --- Full Screen Zen Workspace --- */
+.desktop-workspace {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 20px;
+}
+
+/* --- Washi Tape Masking Elements --- */
+.washi-tape {
+  position: absolute;
+  height: 20px;
+  width: 80px;
+  background-color: var(--washi-yellow);
+  opacity: 0.85;
+  transform: rotate(-3deg);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  z-index: 10;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+
+.washi-tape-lavender { background-color: var(--washi-lavender); transform: rotate(2.5deg); }
+.washi-tape-mint { background-color: var(--washi-mint); transform: rotate(-2deg); }
+
+/* --- Buttons --- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--text-main);
+  color: var(--bg-surface);
+  border-color: transparent;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  opacity: 0.95;
+}
+
+.btn-outline {
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-outline:hover {
+  background-color: var(--bg-app);
+  border-color: var(--text-muted);
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  border-radius: 6px;
+}
+
+/* --- Responsive Breakpoints (Point 2) --- */
+@media (max-width: 800px) {
+  body {
+    overflow-y: auto;
+  }
+  .desktop-workspace {
+    padding: 10px;
+    height: auto;
+    min-height: 100vh;
+  }
+}

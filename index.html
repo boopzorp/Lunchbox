@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Lunchbox — Minimal Remembrance Vault</title>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Lunchbox" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍱</text></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍱</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Cinzel:wght@600;800&family=Inter:wght@400;600;800&family=Outfit:wght@500;700;800&family=Playfair+Display:ital,wght@0,600;0,800;1,600&family=Space+Mono:ital,wght@0,400;0,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css?v=20260726_v33" />
+  <link rel="stylesheet" href="styles/components.css?v=20260726_v33" />
+</head>
+<body>
+
+  <!-- Full-Screen Zen Desktop & Mobile Workspace -->
+  <div class="desktop-workspace" role="main">
+    
+    <!-- MOBILE TOP BAR (Only visible on screens <= 768px) -->
+    <header class="mobile-top-bar" aria-label="Mobile Navigation Bar">
+      <button class="mobile-nav-btn" onclick="event.stopPropagation(); window.app.togglePalette('left')" title="Open Vault & Sketchbooks">
+        🎒 <span class="mobile-nav-label">Vault</span>
+      </button>
+
+      <div class="mobile-brand" onclick="window.app.showShelfView()">
+        🍱 <span class="mobile-brand-title">LUNCHBOX</span>
+      </div>
+
+      <button class="mobile-nav-btn" onclick="event.stopPropagation(); window.app.togglePalette('right')" title="Open Tools Palette">
+        🛠️ <span class="mobile-nav-label">Tools</span>
+      </button>
+    </header>
+
+    <!-- LEFT COLLAPSIBLE FLOATING PALETTE: My Notebooks (iPadOS Paper style) -->
+    <aside id="palette-left" class="floating-palette palette-left" aria-label="Sketchbooks Vault">
+      <div class="palette-header">
+        <span class="palette-title">🎒 Vault</span>
+        <button class="palette-toggle-btn" onclick="window.app.togglePalette('left')" title="Expand / Collapse Menu" aria-label="Toggle folders menu">
+          <span>📝</span>
+        </button>
+      </div>
+
+      <div id="palette-top-actions" style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+        <!-- Dynamically populated based on auth status -->
+      </div>
+
+      <div class="palette-section-title">My Notebooks</div>
+      <div id="palette-notebook-list" style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+        <!-- Dynamically populated -->
+      </div>
+
+      <div style="border-top: 1px solid var(--border-subtle); margin-top: 6px; padding-top: 6px; width: 100%;">
+        <button class="palette-item" onclick="window.app.openNewNotebookModal()" title="Create New Sketchbook">
+          <span class="palette-icon">＋</span>
+          <span class="palette-label" style="font-weight: 600;">New Book</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- CENTER WORKSPACE: The iPad Paper 3D Carousel OR Open Hobonichi Book -->
+    <main id="main-book-container" class="book-workspace">
+      <!-- Dynamically rendered by app.js -->
+    </main>
+
+    <!-- RIGHT COLLAPSIBLE FLOATING PALETTE: Remembrance Tools -->
+    <aside id="palette-right" class="floating-palette palette-right" aria-label="Remembrance Tools">
+      <div class="palette-header">
+        <span class="palette-title">🍱 Tools</span>
+        <button class="palette-toggle-btn" onclick="window.app.togglePalette('right')" title="Expand / Collapse Tools" aria-label="Toggle tools menu">
+          <span>⚙️</span>
+        </button>
+      </div>
+
+      <button class="palette-item" onclick="window.app.openEditNotebookModal()" title="Customize Spine Color, Cover Color, Spine Text, Title">
+        <span class="palette-icon">🎨</span>
+        <span class="palette-label" style="font-weight: 600;">Customize Book</span>
+      </button>
+
+      <button class="palette-item" onclick="window.app.openAddStickerModal()" title="Add Pinterest Image / Sticker to Page">
+        <span class="palette-icon">🖼️</span>
+        <span class="palette-label">Add Sticker</span>
+      </button>
+
+      <button class="palette-item" onclick="window.app.openNewItemModal()" title="Detailed Pack Item">
+        <span class="palette-icon">✏️</span>
+        <span class="palette-label">Pack Reminder</span>
+      </button>
+
+      <div class="palette-item" style="padding: 6px 12px; cursor: default;">
+        <span class="palette-icon">📐</span>
+        <select id="palette-format-select" onchange="window.app.handleFormatChange(this.value)" style="flex: 1; border: none; background: transparent; font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--text-main); outline: none; cursor: pointer;">
+          <option value="grid">🔲 Grid Paper</option>
+          <option value="lined">📝 Lined Ruled</option>
+          <option value="dots">▫️ Dot Grid</option>
+          <option value="unruled">⬜ Unruled</option>
+        </select>
+      </div>
+
+      <button class="palette-item" onclick="window.app.toggleAIDrawer(true)" title="Ask Pippy AI Buddy">
+        <span class="palette-icon">🦉</span>
+        <span class="palette-label">AI Buddy</span>
+      </button>
+
+      <button class="palette-item" data-view="history" onclick="window.app.switchView('history')" title="OS Nudge History">
+        <span class="palette-icon">🔔</span>
+        <span class="palette-label">OS Nudges</span>
+      </button>
+
+      <button class="palette-item" onclick="window.app.openAuthModal()" title="Firebase Vault Account & Login">
+        <span class="palette-icon">🔑</span>
+        <span class="palette-label">Account / Auth</span>
+      </button>
+
+      <button class="palette-item" data-view="settings" onclick="window.app.switchView('settings')" title="Vault Settings">
+        <span class="palette-icon">⚙️</span>
+        <span class="palette-label">Settings</span>
+      </button>
+    </aside>
+
+  </div>
+
+  <!-- Feature 4: AI Assistant Slide-over Drawer -->
+  <aside id="ai-assistant-drawer" class="ai-drawer" role="dialog" aria-label="Lunchbox AI Buddy">
+    <div class="ai-drawer-header">
+      <div style="font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+        <span>🦉</span> Pippy AI Buddy
+      </div>
+      <button id="close-ai-drawer" class="btn btn-sm btn-outline">✕ Close</button>
+    </div>
+
+    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 6px; overflow-x: auto;">
+      <button class="btn btn-sm btn-outline" onclick="window.lunchboxAI.triggerQuickAction('summary')">📊 Summary</button>
+      <button class="btn btn-sm btn-outline" onclick="window.lunchboxAI.triggerQuickAction('movie')">🎬 Movie</button>
+      <button class="btn btn-sm btn-outline" onclick="window.lunchboxAI.triggerQuickAction('priority')">🔥 Urgent</button>
+      <button class="btn btn-sm btn-outline" onclick="window.lunchboxAI.triggerQuickAction('quiz')">🧠 Quiz Notes</button>
+    </div>
+
+    <div id="ai-messages-container" class="ai-messages" aria-live="polite"></div>
+
+    <form id="ai-chat-form" class="ai-form">
+      <input type="text" id="ai-chat-input" class="ai-input" placeholder="Ask about tasks, movies, ideas..." autocomplete="off" />
+      <button type="submit" class="btn btn-primary">Send</button>
+    </form>
+  </aside>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="assertive"></div>
+
+  <!-- Modal: Customize Sketchbook Design -->
+  <dialog id="edit-notebook-modal" class="modal-box" aria-labelledby="modal-edit-nb-title">
+    <h3 id="modal-edit-nb-title" style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">🎨 Customize Sketchbook Aesthetics</h3>
+    <form id="edit-notebook-form">
+      <input type="hidden" id="edit-nb-id" name="id" />
+
+      <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Icon</label>
+          <input type="text" id="edit-nb-icon" name="icon" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; font-size: 20px;" required />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Book Title</label>
+          <input type="text" id="edit-nb-title" name="title" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" required />
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Cover Layout Style</label>
+        <select id="edit-nb-show-label" name="showCoverLabel" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-weight: 600;">
+          <option value="true">📄 Classic Paper Label Card (White Box)</option>
+          <option value="false">🎨 Full Cover Canvas (Hide White Box)</option>
+        </select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Spine Color</label>
+          <select id="edit-nb-spine-color" name="spineColor" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="green">🟢 Hobonichi Deep Green</option>
+            <option value="slate">🔵 Sky Blue</option>
+            <option value="terracotta">🔴 Terracotta Peach</option>
+            <option value="yellow">🟡 Classic Manila Gold</option>
+            <option value="lavender">🟣 Pastel Lavender</option>
+            <option value="obsidian">⚫ Obsidian Black</option>
+            <option value="crimson">🍷 Crimson Burgundy</option>
+            <option value="pink">🌸 Soft Pink</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Cover Page Color</label>
+          <select id="edit-nb-cover-color" name="coverColor" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="cream">📄 Cream Linen</option>
+            <option value="kraft">📜 Vintage Kraft Paper</option>
+            <option value="charcoal">🖤 Midnight Charcoal</option>
+            <option value="sage">🍃 Pastel Sage</option>
+            <option value="terracotta">🔴 Terracotta Peach</option>
+            <option value="navy">🔵 Deep Navy</option>
+            <option value="amber">🥐 Warm Amber Gold</option>
+            <option value="lavender">🟣 Pastel Lavender</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Custom Front Cover Text</label>
+        <input type="text" id="edit-nb-cover-title" name="coverTitle" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="Custom Cover Text (Leave empty to use Book Title)" />
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Cover Google Font</label>
+          <select id="edit-nb-cover-font" name="coverFont" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="Inter">Inter (Clean Modern Sans)</option>
+            <option value="Playfair Display">Playfair Display (Classic Serif)</option>
+            <option value="Caveat">Caveat (Handwritten Journal)</option>
+            <option value="Cinzel">Cinzel (Roman Engraved)</option>
+            <option value="Outfit">Outfit (Bold Minimalist)</option>
+            <option value="Space Mono">Space Mono (Typewriter Tech)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Cover Text Color</label>
+          <select id="edit-nb-cover-text-color" name="coverTextColor" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="#1E293B">🖤 Midnight Charcoal</option>
+            <option value="#F4B800">🟡 Foil Gold</option>
+            <option value="#FFFFFF">⚪ Crisp White</option>
+            <option value="#2563EB">🔵 Deep Sapphire</option>
+            <option value="#DC2626">🔴 Crimson Rose</option>
+            <option value="#059669">🟢 Emerald Green</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Spine Embossed Text</label>
+        <input type="text" id="edit-nb-spine-text" name="spineText" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="e.g. 2026 • LUNCHBOX or MY RECIPES" required />
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Cover Subtitle / Description</label>
+        <input type="text" id="edit-nb-desc" name="description" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="Short summary..." />
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px; margin-top: 14px;">
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('edit-notebook-modal').close(); window.app.handleArchiveModalBook();" title="Move to Archives Vault">
+            📦 Archive
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" style="color: #E53935; border-color: rgba(229,57,53,0.3);" onclick="document.getElementById('edit-notebook-modal').close(); window.app.handleDeleteModalBookPermanently();" title="Permanently delete sketchbook">
+            🗑️ Delete
+          </button>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('edit-notebook-modal').close()">Cancel</button>
+          <button type="submit" class="btn btn-primary">💾 Save Customizations</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Add Image / Pinterest Sticker -->
+  <dialog id="add-sticker-modal" class="modal-box" aria-labelledby="modal-sticker-title">
+    <h3 id="modal-sticker-title" style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">🖼️ Add Image or Pinterest Sticker</h3>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      Paste an image URL (from Pinterest, web, etc.) or select an aesthetic preset. You can drag and reposition it anywhere on the page!
+    </p>
+
+    <form id="add-sticker-form">
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Image URL</label>
+        <input type="url" id="sticker-url-input" name="url" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="https://images.unsplash.com/... or pinterest link" required />
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 8px;">Or Click a Built-in Hobonichi Preset:</label>
+        <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;">
+          <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&auto=format&fit=crop&q=80" onclick="document.getElementById('sticker-url-input').value = this.src" style="width: 54px; height: 54px; border-radius: 8px; object-fit: crop; cursor: pointer; border: 1px solid var(--border-color);" title="Vintage Book Stack" />
+          <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200&auto=format&fit=crop&q=80" onclick="document.getElementById('sticker-url-input').value = this.src" style="width: 54px; height: 54px; border-radius: 8px; object-fit: crop; cursor: pointer; border: 1px solid var(--border-color);" title="Curious Cat" />
+          <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=200&auto=format&fit=crop&q=80" onclick="document.getElementById('sticker-url-input').value = this.src" style="width: 54px; height: 54px; border-radius: 8px; object-fit: crop; cursor: pointer; border: 1px solid var(--border-color);" title="Morning Coffee" />
+          <img src="https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=200&auto=format&fit=crop&q=80" onclick="document.getElementById('sticker-url-input').value = this.src" style="width: 54px; height: 54px; border-radius: 8px; object-fit: crop; cursor: pointer; border: 1px solid var(--border-color);" title="Cinema Roll" />
+          <img src="https://images.unsplash.com/photo-1457369804613-52c61a468e7d?w=200&auto=format&fit=crop&q=80" onclick="document.getElementById('sticker-url-input').value = this.src" style="width: 54px; height: 54px; border-radius: 8px; object-fit: crop; cursor: pointer; border: 1px solid var(--border-color);" title="Old Pages" />
+          <img src="https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80" onclick="document.getElementById('sticker-url-input').value = this.src" style="width: 54px; height: 54px; border-radius: 8px; object-fit: crop; cursor: pointer; border: 1px solid var(--border-color);" title="Wall Art Decor" />
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Page Side</label>
+          <select name="pageSide" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="right">Right Page 〉</option>
+            <option value="left">〈 Left Page</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Sticker Size</label>
+          <select name="width" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="110">Compact (110px)</option>
+            <option value="160" selected>Medium (160px)</option>
+            <option value="230">Large (230px)</option>
+            <option value="320">Poster (320px)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Caption</label>
+          <input type="text" name="caption" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="e.g. Dream aesthetic" />
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('add-sticker-modal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">＋ Add to Page</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Add New Item -->
+  <dialog id="new-item-modal" class="modal-box" aria-labelledby="modal-item-title">
+    <h3 id="modal-item-title" style="font-size: 20px; font-weight: 700; margin-bottom: 18px;">✏️ Pack a New Reminder</h3>
+    <form id="new-item-form">
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Select Sketchbook</label>
+        <select id="new-item-notebook-select" name="notebookId" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);"></select>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">What do you want to remember?</label>
+        <input type="text" id="new-item-title" name="title" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="e.g. Review PR #142 or Buy coffee beans" required />
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Priority</label>
+          <select name="priority" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="medium">⚡ Medium</option>
+            <option value="high">🔥 High Urgent</option>
+            <option value="low">🌱 Low</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">When / Due</label>
+          <input type="text" name="due" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" value="Today" />
+        </div>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Category</label>
+        <input type="text" name="category" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" value="General" />
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Notes & Context</label>
+        <textarea name="notes" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); min-height: 70px;" placeholder="Add details so you don't forget..."></textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('new-item-modal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">＋ Pack Reminder</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Edit Entry -->
+  <dialog id="edit-item-modal" class="modal-box" aria-labelledby="modal-edit-item-title">
+    <h3 id="modal-edit-item-title" style="font-size: 20px; font-weight: 700; margin-bottom: 18px;">✏️ Edit Entry Details</h3>
+    <form id="edit-item-form">
+      <input type="hidden" id="edit-item-nb-id" name="notebookId" />
+      <input type="hidden" id="edit-item-id" name="itemId" />
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Entry Title</label>
+        <input type="text" id="edit-item-title-input" name="title" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" required />
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Priority</label>
+          <select id="edit-item-priority" name="priority" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="medium">⚡ Medium</option>
+            <option value="high">🔥 High Urgent</option>
+            <option value="low">🌱 Low</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">When / Due</label>
+          <input type="text" id="edit-item-due" name="due" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" />
+        </div>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Category Tag</label>
+        <input type="text" id="edit-item-category" name="category" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" />
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Notes & Details</label>
+        <textarea id="edit-item-notes" name="notes" rows="3" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('edit-item-modal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Add New Notebook -->
+  <dialog id="new-notebook-modal" class="modal-box" aria-labelledby="modal-nb-title">
+    <h3 id="modal-nb-title" style="font-size: 20px; font-weight: 700; margin-bottom: 18px;">📖 Create New Sketchbook</h3>
+    <form id="new-notebook-form">
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Title</label>
+        <input type="text" id="new-nb-title" name="title" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="e.g. Fitness & Gym Log" required />
+      </div>
+      <div style="display: grid; grid-template-columns: 80px 1fr; gap: 12px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Icon</label>
+          <input type="text" name="icon" value="🎒" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; font-size: 20px;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Spine Color</label>
+          <select name="spineColor" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="green" selected>🟢 Hobonichi Deep Green</option>
+            <option value="slate">🔵 Sky Blue</option>
+            <option value="terracotta">🔴 Terracotta Peach</option>
+            <option value="yellow">🟡 Classic Manila Gold</option>
+            <option value="lavender">🟣 Pastel Lavender</option>
+            <option value="obsidian">⚫ Obsidian Black</option>
+            <option value="crimson">🍷 Crimson Burgundy</option>
+            <option value="pink">🌸 Soft Pink</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Book Cover Color</label>
+          <select name="coverColor" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <option value="cream" selected>📄 Cream Linen</option>
+            <option value="kraft">📜 Vintage Kraft Paper</option>
+            <option value="charcoal">🖤 Midnight Charcoal</option>
+            <option value="sage">🍃 Pastel Sage</option>
+            <option value="rose">🌸 Soft Rose</option>
+            <option value="cyan">🌧️ Sky Cyan</option>
+            <option value="amber">🥐 Warm Amber</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Spine Text</label>
+          <input type="text" name="spineText" value="2026 • LUNCHBOX" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" required />
+        </div>
+      </div>
+      <div style="margin-bottom: 20px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Description</label>
+        <input type="text" name="description" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" placeholder="What will you pack in this sketchbook?" />
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('new-notebook-modal').close()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Book</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Simulated OS Lock Screen / Home Screen Widget -->
+  <dialog id="home-screen-widget-modal" class="modal-box" aria-labelledby="widget-modal-title">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 id="widget-modal-title" style="font-size: 18px; font-weight: 700;">📱 Native OS System Notification Lock</h3>
+      <button class="btn btn-sm btn-outline" onclick="document.getElementById('home-screen-widget-modal').close()">✕</button>
+    </div>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+      Your sticky reminder is linked directly to your desktop and mobile operating system notifications!
+    </p>
+    <div id="widget-preview-content" style="background: var(--bg-app); padding: 16px; border-radius: 16px; border: 1px solid var(--border-color);"></div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 18px;">
+      <button type="button" class="btn btn-primary" onclick="document.getElementById('home-screen-widget-modal').close()">Got it!</button>
+    </div>
+  </dialog>
+
+  <!-- Modal: Vault Settings -->
+  <dialog id="settings-modal" class="modal-box modal-lg" aria-labelledby="modal-settings-title">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 id="modal-settings-title" style="font-size: 20px; font-weight: 700; margin: 0;">⚙️ Vault Settings</h3>
+      <button class="btn btn-sm btn-outline" onclick="document.getElementById('settings-modal').close()">✕</button>
+    </div>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Customize your desktop theme, sound effects, and native OS notifications.</p>
+
+    <div style="margin-bottom: 18px;">
+      <label style="display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 6px;">🎨 Desk Theme</label>
+      <select id="setting-theme" onchange="window.app.handleSaveSettings()" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main); font-family: var(--font-body);">
+        <option value="light">☀️ Cream Paper & Green Spine Desk (Recommended)</option>
+        <option value="dark">🌙 Obsidian Charcoal Studio Desk</option>
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
+      <div>
+        <div style="font-size: 13px; font-weight: 600;">🔔 Native OS System Notifications</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Receive sticky reminders on your system outside the app!</div>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="if(window.stickyManager) window.stickyManager.enableOSNotifications()">Link OS Alerts</button>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border-subtle);">
+      <div>
+        <div style="font-size: 13px; font-weight: 600;">🔊 Playful Audio Sound Effects</div>
+        <div style="font-size: 12px; color: var(--text-muted);">Synthesize crisp snaps and chime alerts when checking off items.</div>
+      </div>
+      <input type="checkbox" id="setting-sound" onchange="window.app.handleSaveSettings()" style="width: 20px; height: 20px; accent-color: var(--spine-green);" />
+    </div>
+
+    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <div style="font-weight: 600; font-size: 13px; color: var(--color-terracotta);">🔄 Reset Data</div>
+        <div style="font-size: 11.5px; color: var(--text-muted);">Restore sample sketchbooks and stickers.</div>
+      </div>
+      <button class="btn btn-sm btn-outline" style="color: var(--color-terracotta);" onclick="window.app.resetDemoData()">Reset Data</button>
+    </div>
+  </dialog>
+
+  <!-- FIREBASE AUTHENTICATION & ACCOUNT MODAL -->
+  <dialog id="auth-modal" class="modal-box" aria-label="Firebase Authentication">
+    <div class="modal-header">
+      <h3 style="font-size: 18px; font-weight: 800;">🔐 Lunchbox Vault Account</h3>
+      <button class="modal-close-btn" onclick="document.getElementById('auth-modal').close()">✕</button>
+    </div>
+
+    <div class="auth-tab-bar">
+      <button id="tab-btn-signin" class="auth-tab-btn active" onclick="window.app.switchAuthTab('signin')">Sign In</button>
+      <button id="tab-btn-signup" class="auth-tab-btn" onclick="window.app.switchAuthTab('signup')">Create Account</button>
+    </div>
+
+    <!-- SIGN IN FORM -->
+    <form id="auth-signin-form" onsubmit="window.app.handleAuthSubmit(event, 'signin')">
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Email Address</label>
+        <input type="email" name="email" required placeholder="you@example.com" style="width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <div style="margin-bottom: 18px;">
+        <label style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Password</label>
+        <input type="password" name="password" required placeholder="••••••••" style="width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 24px; margin-bottom: 12px;">Sign In to Vault</button>
+    </form>
+
+    <!-- SIGN UP FORM -->
+    <form id="auth-signup-form" onsubmit="window.app.handleAuthSubmit(event, 'signup')" style="display: none;">
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Display Name</label>
+        <input type="text" name="displayName" required placeholder="Your Name" style="width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Email Address</label>
+        <input type="email" name="email" required placeholder="you@example.com" style="width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <div style="margin-bottom: 18px;">
+        <label style="display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px;">Password</label>
+        <input type="password" name="password" required placeholder="Create password (6+ chars)" style="width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 24px; margin-bottom: 12px;">Create Lunchbox Account</button>
+    </form>
+
+    <div style="text-align: center; margin: 12px 0; font-size: 12px; color: var(--text-subtle);">OR</div>
+
+    <button class="btn btn-outline" style="width: 100%; padding: 10px; font-size: 13.5px; font-weight: 600; border-radius: 24px; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;" onclick="window.app.handleGoogleAuth()">
+      <span>🌐</span> Continue with Google
+    </button>
+  </dialog>
+
+  <!-- FIREBASE FIRESTORE DATABASE SETUP MODAL -->
+  <dialog id="firestore-modal" class="modal-box" aria-label="Firebase Firestore Configuration">
+    <div class="modal-header">
+      <h3 style="font-size: 18px; font-weight: 800;">🔥 Connect Firebase Database</h3>
+      <button class="modal-close-btn" onclick="document.getElementById('firestore-modal').close()">✕</button>
+    </div>
+
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+      Paste your Firebase Web App <code>firebaseConfig</code> parameters to link your cloud Firestore database.
+    </p>
+
+    <form onsubmit="window.app.handleFirestoreSave(event)">
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 4px;">API Key (apiKey)</label>
+        <input type="text" id="fb-apiKey" placeholder="AIzaSy..." style="width: 100%; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 4px;">Auth Domain (authDomain)</label>
+        <input type="text" id="fb-authDomain" placeholder="your-project.firebaseapp.com" style="width: 100%; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <div style="margin-bottom: 12px;">
+        <label style="display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 4px;">Project ID (projectId)</label>
+        <input type="text" id="fb-projectId" placeholder="your-project-id" style="width: 100%; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <div style="margin-bottom: 18px;">
+        <label style="display: block; font-size: 11.5px; font-weight: 700; margin-bottom: 4px;">Storage Bucket (storageBucket)</label>
+        <input type="text" id="fb-storageBucket" placeholder="your-project.appspot.com" style="width: 100%; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 11px; font-weight: 700; border-radius: 20px;">
+        💾 Save Firebase Credentials & Sync DB
+      </button>
+    </form>
+  </dialog>
+
+  <!-- APP-SPECIFIC DELETE CONFIRMATION MODAL -->
+  <dialog id="delete-confirm-modal" class="modal-box modal-sm" aria-label="Delete confirmation">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 class="modal-title" style="color: #E53935; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 6px; margin: 0;">
+        <span>🗑️</span> Delete Notebook
+      </h3>
+      <button class="modal-close" onclick="document.getElementById('delete-confirm-modal').close()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-subtle);">✕</button>
+    </div>
+    <div class="modal-body" style="text-align: center; padding: 10px 4px 6px 4px;">
+      <p style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;" id="delete-confirm-notebook-title">Are you sure?</p>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px;">
+        This will permanently erase all notes, items, and stickers inside. This action cannot be undone!
+      </p>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button class="btn btn-outline" style="flex: 1; border-radius: 20px; padding: 10px; font-weight: 600;" onclick="document.getElementById('delete-confirm-modal').close()">
+          Cancel
+        </button>
+        <button class="btn" style="flex: 1; border-radius: 20px; padding: 10px; font-weight: 700; background: #E53935; color: white; border: none;" id="delete-confirm-action-btn">
+          Delete Permanently
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- GENERIC IN-APP CONFIRM & ALERT MODAL (Replaces browser window.alert and window.confirm) -->
+  <dialog id="app-dialog-modal" class="modal-box modal-sm" aria-label="Application Notice">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h3 id="app-dialog-title" style="font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; margin: 0;">
+        <span id="app-dialog-icon">🍱</span>
+        <span id="app-dialog-heading">Lunchbox</span>
+      </h3>
+      <button class="modal-close" onclick="document.getElementById('app-dialog-modal').close()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-subtle);">✕</button>
+    </div>
+    <div class="modal-body" style="text-align: center; padding: 6px 4px 6px 4px;">
+      <p id="app-dialog-message" style="font-size: 14px; font-weight: 500; color: var(--text-main); line-height: 1.5; margin-bottom: 22px; white-space: pre-line;"></p>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button id="app-dialog-cancel-btn" class="btn btn-outline" style="flex: 1; border-radius: 20px; padding: 10px; font-weight: 600;" onclick="document.getElementById('app-dialog-modal').close()">
+          Cancel
+        </button>
+        <button id="app-dialog-confirm-btn" class="btn btn-primary" style="flex: 1; border-radius: 20px; padding: 10px; font-weight: 700;">
+          OK
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <link rel="stylesheet" href="styles/main.css?v=20260726_v35" />
+  <link rel="stylesheet" href="styles/components.css?v=20260726_v35" />
+
+  <!-- Firebase Web SDK (v10 Compat CDN) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <!-- JavaScript Modules with v35 Cache Busting -->
+  <script src="js/firebase-config.js?v=20260726_v35"></script>
+  <script src="js/auth.js?v=20260726_v35"></script>
+  <script src="js/store.js?v=20260726_v35"></script>
+  <script src="js/sticky.js?v=20260726_v35"></script>
+  <script src="js/notifications.js?v=20260726_v35"></script>
+  <script src="js/ai.js?v=20260726_v35"></script>
+  <script src="js/app.js?v=20260726_v35"></script>
+</body>
+</html>

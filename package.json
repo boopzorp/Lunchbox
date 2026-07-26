@@ -1,0 +1,20 @@
+{
+  "name": "lunchbox-app",
+  "version": "1.0.0",
+  "description": "A mindful bento-style remembrance vault with sticky 5-minute locks, recurring Duolingo-style nudges, and a minimal AI assistant.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx -y serve@latest . -l 3000",
+    "start": "npx -y serve@latest . -l 3000"
+  },
+  "keywords": [
+    "remembrance",
+    "productivity",
+    "bento",
+    "notebooks",
+    "notifications",
+    "ai-assistant"
+  ],
+  "author": "Antigravity & User",
+  "license": "MIT"
+}
