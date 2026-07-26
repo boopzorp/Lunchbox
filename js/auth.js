@@ -62,6 +62,10 @@ class AuthEngine {
                 window.store.resetToDefault();
                 await docRef.set(window.store.data);
               }
+              
+              if (window.stickyManager && Notification.permission === 'granted') {
+                window.stickyManager.subscribeToFCM();
+              }
             } catch (dbErr) {
               console.error("Firestore sync error:", dbErr);
             }

@@ -23,7 +23,7 @@ class StickyNotificationManager {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20260726_v3').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=20260726_v4').then(reg => {
         this.swRegistration = reg;
 
         // Register Periodic Background Sync so Android OS wakes SW even when PWA is closed!
@@ -32,9 +32,38 @@ class StickyNotificationManager {
             minInterval: 6 * 60 * 60 * 1000 // 6 Hours
           }).catch(() => {});
         }
+
+        // Subscribe to FCM if permissions already granted
+        if (Notification.permission === 'granted') {
+          this.subscribeToFCM(reg);
+        }
       }).catch(err => {
         console.warn('Service Worker registration skipped:', err);
       });
+    }
+  }
+
+  async subscribeToFCM(reg = this.swRegistration) {
+    if (!window.firebaseMessaging || !window.FIREBASE_VAPID_KEY || !reg) return;
+    try {
+      const currentToken = await window.firebaseMessaging.getToken({ 
+        vapidKey: window.FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration: reg
+      });
+      
+      if (currentToken) {
+        console.log('✅ FCM Push Token Registered');
+        // Save token to user document in Firestore so Cloud Functions can push to it
+        if (window.authEngine && window.authEngine.isAuthenticated() && window.firebaseDb) {
+          const user = window.authEngine.getCurrentUser();
+          await window.firebaseDb.collection('users').doc(user.uid).set(
+            { fcmToken: currentToken }, 
+            { merge: true }
+          );
+        }
+      }
+    } catch (err) {
+      console.warn('Could not register FCM token:', err);
     }
   }
 
@@ -67,6 +96,7 @@ class StickyNotificationManager {
             Notification.requestPermission().then(permission => {
               if (permission === 'granted') {
                 this.ensurePersistentNotification();
+                this.subscribeToFCM();
               }
             });
           }

@@ -58,6 +58,9 @@ function initFirebaseServices() {
     }
     window.firebaseAuth = firebase.auth();
     window.firebaseDb = firebase.firestore();
+    window.firebaseMessaging = firebase.messaging();
+    
+    window.FIREBASE_VAPID_KEY = "BKT-wVHLMJjRJ1QJwWNLR28PgFqR2109oZ8mIPpD3ofNe75EhP6wB5jLPkdTbV2z4jgPWBycGKWh8cehhtLzR3A";
     
     // Automatically persist active config so UI status badges reflect live connection
     try {
