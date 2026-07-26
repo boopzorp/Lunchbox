@@ -105,6 +105,16 @@ class AuthEngine {
           email: email
         };
         this.saveUserState(userObj);
+        if (window.firebaseDb && window.store) {
+          try {
+            window.store.resetToDefault();
+            const cleanData = JSON.parse(JSON.stringify(window.store.data));
+            await window.firebaseDb.collection('users').doc(res.user.uid).set(cleanData, { merge: true });
+            console.log("✨ Directly initialized fresh Firestore vault in signUp!");
+          } catch(dbErr) {
+            console.error("Direct signUp Firestore error:", dbErr);
+          }
+        }
         if (window.app) {
           window.app.viewMode = 'shelf';
           window.app.render();
