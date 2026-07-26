@@ -1,0 +1,12 @@
+{
+  "name": "lunchbox-functions",
+  "description": "Lunchbox scheduled push notifications",
+  "dependencies": {
+    "firebase-admin": "^12.1.1",
+    "firebase-functions": "^5.0.1"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js"
+}

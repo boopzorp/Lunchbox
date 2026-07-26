@@ -25,7 +25,12 @@ self.addEventListener('notificationclick', (event) => {
 
 // Handle Incoming Web Push Notifications (Works even when PWA/Chrome is completely closed)
 self.addEventListener('push', (event) => {
-  let data = { title: "🍱 Lunchbox Vault Check-in", body: "Hey! Don't forget your thoughts and active notebooks in Lunchbox." };
+  let data = { 
+    type: 'persistent',
+    title: "🍱 Lunchbox Vault — Always Active", 
+    body: "Your remembrance vault is pinned. Tap anytime to jump back in!" 
+  };
+  
   try {
     if (event.data) {
       data = event.data.json();
@@ -36,15 +41,21 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  const isPersistent = data.type === 'persistent';
+  
+  const options = {
+    body: data.body || "Your remembrance vault is waiting for you!",
+    icon: 'icon.png',
+    badge: 'icon.png',
+    tag: data.tag || (isPersistent ? 'lunchbox-sticky-persistent' : 'lunchbox-push-' + Date.now()),
+    requireInteraction: isPersistent ? true : false,
+    ongoing: isPersistent ? true : false,
+    renotify: isPersistent ? false : true,
+    data: { url: '/', timestamp: Date.now() }
+  };
+
   event.waitUntil(
-    self.registration.showNotification(data.title || "🍱 Lunchbox", {
-      body: data.body || "Your remembrance vault is waiting for you!",
-      icon: 'icon.png',
-      badge: 'icon.png',
-      tag: data.tag || ('lunchbox-push-' + Date.now()),
-      requireInteraction: false,
-      data: { url: '/', timestamp: Date.now() }
-    })
+    self.registration.showNotification(data.title || "🍱 Lunchbox", options)
   );
 });
 
