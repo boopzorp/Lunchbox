@@ -52,15 +52,18 @@ class AuthEngine {
           if (window.firebaseDb && window.store) {
             try {
               const docRef = window.firebaseDb.collection('users').doc(user.uid);
-              const docSnap = await docRef.get();
-              if (docSnap.exists) {
+              let docSnap = null;
+              try { docSnap = await docRef.get(); } catch (e) { console.warn("Initial read lag, creating doc:", e); }
+              
+              if (docSnap && docSnap.exists) {
                 console.log("🔥 Loaded user vault from Cloud Firestore");
                 window.store.setState(docSnap.data());
-                // First login for brand new account: initialize with clean DEFAULT_DATA (1 sample notebook)
+              } else {
+                // First login for brand new account: initialize with clean DEFAULT_DATA
                 console.log("✨ Initializing fresh vault for new account");
                 window.store.resetToDefault();
                 const cleanInitialData = JSON.parse(JSON.stringify(window.store.data));
-                await docRef.set(cleanInitialData);
+                await docRef.set(cleanInitialData, { merge: true });
               }
               
               if (window.stickyManager && Notification.permission === 'granted') {
