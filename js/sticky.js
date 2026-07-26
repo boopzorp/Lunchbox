@@ -23,7 +23,7 @@ class StickyNotificationManager {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20260726').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=20260726_v2').then(reg => {
         this.swRegistration = reg;
       }).catch(err => {
         console.warn('Service Worker registration skipped:', err);
@@ -76,6 +76,7 @@ class StickyNotificationManager {
       badge: 'icon.png',
       tag: customTag || (requireInteraction ? 'lunchbox-sticky-persistent' : ('lunchbox-nudge-' + Date.now())),
       requireInteraction: requireInteraction,
+      ongoing: requireInteraction,
       renotify: true,
       silent: false,
       data: { url: window.location.href, timestamp: Date.now() }
