@@ -6,13 +6,13 @@
  */
 
 const DEFAULT_FIREBASE_CONFIG = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.firebasestorage.app",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: ""
+  apiKey: "AIzaSyCX0RQPZadLUWY07is7FFdktBPfmBpyOuA",
+  authDomain: "thelunchbox-app.firebaseapp.com",
+  projectId: "thelunchbox-app",
+  storageBucket: "thelunchbox-app.firebasestorage.app",
+  messagingSenderId: "204702627714",
+  appId: "1:204702627714:web:69c80834a5a5be6bb5019b",
+  measurementId: "G-5NS20ELB4G"
 };
 
 function initFirebaseServices() {
