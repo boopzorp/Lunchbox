@@ -23,6 +23,31 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// Handle Incoming Web Push Notifications (Works even when PWA/Chrome is completely closed)
+self.addEventListener('push', (event) => {
+  let data = { title: "🍱 Lunchbox Vault Check-in", body: "Hey! Don't forget your thoughts and active notebooks in Lunchbox." };
+  try {
+    if (event.data) {
+      data = event.data.json();
+    }
+  } catch(e) {
+    if (event.data) {
+      data.body = event.data.text();
+    }
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || "🍱 Lunchbox", {
+      body: data.body || "Your remembrance vault is waiting for you!",
+      icon: 'icon.png',
+      badge: 'icon.png',
+      tag: data.tag || ('lunchbox-push-' + Date.now()),
+      requireInteraction: false,
+      data: { url: '/', timestamp: Date.now() }
+    })
+  );
+});
+
 // Gentle Re-Pin: Periodic & Background Sync handlers (works even when PWA is closed completely)
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'lunchbox-persistent-nudge' || event.tag === 'lunchbox-6h-nudge') {
@@ -33,6 +58,20 @@ self.addEventListener('periodicsync', (event) => {
 self.addEventListener('sync', (event) => {
   if (event.tag === 'lunchbox-background-nudge') {
     event.waitUntil(showBackgroundPersistentNotification());
+  }
+});
+
+// Listen to messages from app main thread to trigger background notifications
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'TRIGGER_NUDGE') {
+    self.registration.showNotification(event.data.title || "🍱 Lunchbox Check-in", {
+      body: event.data.body || "Hey, I exist! Don't forget your active notebooks today.",
+      icon: 'icon.png',
+      badge: 'icon.png',
+      tag: event.data.tag || ('lunchbox-nudge-' + Date.now()),
+      requireInteraction: false,
+      data: { url: '/', timestamp: Date.now() }
+    });
   }
 });
 

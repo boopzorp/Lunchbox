@@ -33,6 +33,7 @@ class App {
   init() {
     const start = () => {
       this.setupTheme();
+      this.setupInitialPalettes();
       this.render();
       this.setupEventListeners();
       this.setupSwipeGestures();
@@ -58,6 +59,15 @@ class App {
   setupTheme() {
     const settings = window.store?.getSettings() || { theme: 'light' };
     document.documentElement.setAttribute('data-theme', settings.theme);
+  }
+
+  setupInitialPalettes() {
+    if (window.innerWidth <= 850) {
+      const paletteLeft = document.getElementById('palette-left');
+      const paletteRight = document.getElementById('palette-right');
+      if (paletteLeft) paletteLeft.classList.add('collapsed');
+      if (paletteRight) paletteRight.classList.add('collapsed');
+    }
   }
 
   setupEventListeners() {
