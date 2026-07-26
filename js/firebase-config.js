@@ -27,6 +27,12 @@ function initFirebaseServices() {
     savedConfig = JSON.parse(localStorage.getItem('lunchbox_firebase_config') || '{}');
   } catch(e) {}
 
+  // Ignore saved config if it contains placeholder strings from a previous session
+  if (savedConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
+    savedConfig = {};
+    localStorage.removeItem('lunchbox_firebase_config');
+  }
+
   const activeConfig = {
     apiKey: savedConfig.apiKey || DEFAULT_FIREBASE_CONFIG.apiKey,
     authDomain: savedConfig.authDomain || DEFAULT_FIREBASE_CONFIG.authDomain,
