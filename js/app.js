@@ -228,13 +228,27 @@ class App {
   togglePalette(side, forceState = null) {
     const palette = document.getElementById(`palette-${side}`);
     if (!palette) return;
+
+    const otherSide = side === 'left' ? 'right' : 'left';
+    const otherPalette = document.getElementById(`palette-${otherSide}`);
+
+    let willBeOpen = false;
     if (forceState === true) {
+      willBeOpen = true;
       palette.classList.remove('collapsed');
     } else if (forceState === false) {
+      willBeOpen = false;
       palette.classList.add('collapsed');
     } else {
+      willBeOpen = palette.classList.contains('collapsed');
       palette.classList.toggle('collapsed');
     }
+
+    // On mobile view (width <= 850px), ensure only ONE menu drawer is open at a time!
+    if (willBeOpen && window.innerWidth <= 850 && otherPalette) {
+      otherPalette.classList.add('collapsed');
+    }
+
     if (window.notificationEngine) window.notificationEngine.playSound('chime');
   }
 

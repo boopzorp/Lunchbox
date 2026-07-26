@@ -23,8 +23,15 @@ class StickyNotificationManager {
 
   registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20260726_v2').then(reg => {
+      navigator.serviceWorker.register('sw.js?v=20260726_v3').then(reg => {
         this.swRegistration = reg;
+
+        // Register Periodic Background Sync so Android OS wakes SW even when PWA is closed!
+        if ('periodicSync' in reg) {
+          reg.periodicSync.register('lunchbox-persistent-nudge', {
+            minInterval: 6 * 60 * 60 * 1000 // 6 Hours
+          }).catch(() => {});
+        }
       }).catch(err => {
         console.warn('Service Worker registration skipped:', err);
       });
@@ -140,7 +147,7 @@ class StickyNotificationManager {
       }
     }, 1000);
 
-    // Send/maintain persistent OS system notification (always non-dismissable)
+    // Send/maintain persistent OS system notification (always non-dismissable) & register background sync
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         const rem = Math.ceil(Math.max(0, this.requiredSeconds - this.activeSeconds) / 60);
@@ -156,6 +163,11 @@ class StickyNotificationManager {
         );
         this.systemNotificationSent = true;
         this.saveState();
+
+        // Register background sync so Android OS continues to trigger background re-pinning even when PWA is closed!
+        if (this.swRegistration && 'sync' in this.swRegistration) {
+          this.swRegistration.sync.register('lunchbox-background-nudge').catch(() => {});
+        }
       }
     });
   }

@@ -71,7 +71,7 @@ Lunchbox is configured for **100% safe public GitHub publishing**:
 - **Cloud Database Integration:** To link your personal Firebase Firestore project:
   1. Open the app and click **Account / Auth** -> **Connect Firebase DB** (or edit `js/firebase-config.js`).
   2. Paste your web app parameters (`apiKey`, `projectId`, `authDomain`, `storageBucket`).
-- **Strict Firestore Rules:** Pre-configured [firestore.rules](file:///Users/umanvendra/Downloads/Lunchbox/firestore.rules) enforces strict user data isolation so authenticated users can only access their own document (`request.auth.uid == userId`).
+- **Strict Firestore Rules:** Pre-configured `firestore.rules` enforces strict user data isolation so authenticated users can only access their own document (`request.auth.uid == userId`).
 
 ---
 
