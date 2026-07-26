@@ -113,6 +113,9 @@ class Store {
         const cleanData = JSON.parse(JSON.stringify(this.data));
         window.firebaseDb.collection('users').doc(user.uid).set(cleanData, { merge: true })
           .catch(err => console.error("Cloud sync error:", err));
+        if (window.stickyManager && Notification.permission === 'granted' && !window.stickyManager.fcmTokenSynced) {
+          window.stickyManager.subscribeToFCM();
+        }
       } catch (err) {
         console.error("Failed to serialize data for Firestore:", err);
       }

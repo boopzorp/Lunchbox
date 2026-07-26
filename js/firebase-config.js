@@ -64,9 +64,17 @@ function initFirebaseServices() {
     }
     window.firebaseAuth = firebase.auth();
     window.firebaseDb = firebase.firestore();
-    window.firebaseMessaging = firebase.messaging();
-    
     window.FIREBASE_VAPID_KEY = "BKT-wVHLMJjRJ1QJwWNLR28PgFqR2109oZ8mIPpD3ofNe75EhP6wB5jLPkdTbV2z4jgPWBycGKWh8cehhtLzR3A";
+    
+    try {
+      if (typeof firebase.messaging.isSupported === 'function' && firebase.messaging.isSupported()) {
+        window.firebaseMessaging = firebase.messaging();
+      } else {
+        window.firebaseMessaging = firebase.messaging();
+      }
+    } catch (msgErr) {
+      console.warn("Firebase Messaging initialization warning:", msgErr);
+    }
     
     // Automatically persist active config so UI status badges reflect live connection
     try {

@@ -44,10 +44,15 @@ class StickyNotificationManager {
   }
 
   async subscribeToFCM(reg = this.swRegistration) {
+    if (this.isSyncingFCM || this.fcmTokenSynced) return;
     if (!reg && 'serviceWorker' in navigator) {
       try { reg = await navigator.serviceWorker.ready; } catch(e){}
     }
-    if (!window.firebaseMessaging || !window.FIREBASE_VAPID_KEY || !reg) return;
+    if (!window.firebaseMessaging || !window.FIREBASE_VAPID_KEY || !reg) {
+      console.warn("Cannot subscribe to FCM yet: missing messaging, VAPID key, or SW reg.");
+      return;
+    }
+    this.isSyncingFCM = true;
     try {
       const currentToken = await window.firebaseMessaging.getToken({ 
         vapidKey: window.FIREBASE_VAPID_KEY,
@@ -55,18 +60,31 @@ class StickyNotificationManager {
       });
       
       if (currentToken) {
-        console.log('✅ FCM Push Token Registered');
+        console.log('✅ FCM Push Token Registered:', currentToken);
         // Save token to user document in Firestore so Cloud Functions can push to it
         if (window.authEngine && window.authEngine.isAuthenticated() && window.firebaseDb) {
           const user = window.authEngine.getCurrentUser();
-          await window.firebaseDb.collection('users').doc(user.uid).set(
-            { fcmToken: currentToken }, 
-            { merge: true }
-          );
+          try {
+            await window.firebaseDb.collection('users').doc(user.uid).set(
+              { fcmToken: currentToken }, 
+              { merge: true }
+            );
+            console.log("🔥 Successfully synced FCM token to Firestore for user:", user.uid);
+            this.fcmTokenSynced = true;
+          } catch(dbErr) {
+            console.error("Failed to save FCM token to Firestore:", dbErr);
+          }
+        } else {
+          console.warn("FCM token generated, but user not authenticated yet. Will retry on login.");
         }
       }
     } catch (err) {
       console.warn('Could not register FCM token:', err);
+      if (window.notificationEngine) {
+        window.notificationEngine.showToast('⚠️', 'Push Notification Notice', err.message || 'Could not register push token');
+      }
+    } finally {
+      this.isSyncingFCM = false;
     }
   }
 
