@@ -877,12 +877,13 @@ dialog.modal-card::backdrop {
   opacity: 1;
 }
 
-/* --- 10. DRAGGABLE STICKERS (LAYERED BEHIND TEXT CONTENT) --- */
+/* --- 10. DRAGGABLE STICKERS --- */
 .draggable-sticker {
   position: absolute;
-  z-index: 1 !important;
+  z-index: 25;
   cursor: grab;
   user-select: none;
+  touch-action: none;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   max-width: 420px;
   min-width: 70px;
@@ -892,11 +893,12 @@ dialog.modal-card::backdrop {
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
   border: 1px solid var(--border-subtle);
   box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .draggable-sticker:hover,
 .draggable-sticker:active {
-  z-index: 50 !important;
+  z-index: 100 !important;
   box-shadow: 0 8px 20px rgba(0,0,0,0.2);
 }
 
@@ -905,7 +907,9 @@ dialog.modal-card::backdrop {
   height: auto;
   border-radius: 4px;
   display: block;
-  pointer-events: none;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .sticker-caption {
@@ -977,6 +981,7 @@ dialog.modal-card::backdrop {
   flex: 1;
   position: relative;
   z-index: 20;
+  pointer-events: none;
 }
 
 .paper-item-card {
@@ -992,6 +997,7 @@ dialog.modal-card::backdrop {
   position: relative;
   z-index: 20;
   backdrop-filter: blur(12px);
+  pointer-events: auto;
 }
 
 .paper-item-card:hover {
@@ -1450,7 +1456,7 @@ dialog.modal-card::backdrop {
     padding: 3px !important;
     border-radius: 6px !important;
     box-shadow: 0 4px 12px rgba(0,0,0,0.16) !important;
-    z-index: 15 !important;
+    z-index: 25 !important;
     transition: transform 0.2s ease, box-shadow 0.2s ease !important;
   }
 
@@ -1463,25 +1469,6 @@ dialog.modal-card::backdrop {
   .draggable-sticker .sticker-caption {
     font-size: 9px !important;
     margin-top: 1px !important;
-  }
-
-  /* Safe Margin Docking if sticker is positioned over title/header or bottom input bar on mobile */
-  .draggable-sticker[style*="top: 1"],
-  .draggable-sticker[style*="top: 2"],
-  .draggable-sticker[style*="top: 3"],
-  .draggable-sticker[style*="top: 4"] {
-    top: 12px !important;
-    right: 12px !important;
-    left: auto !important;
-  }
-
-  .draggable-sticker[style*="top: 5"],
-  .draggable-sticker[style*="top: 6"],
-  .draggable-sticker[style*="top: 7"],
-  .draggable-sticker[style*="top: 8"] {
-    top: 30% !important;
-    right: 12px !important;
-    left: auto !important;
   }
 
   .book-cloth-spine {
@@ -1518,6 +1505,7 @@ dialog.modal-card::backdrop {
     gap: 10px !important;
     position: relative !important;
     z-index: 20 !important;
+    pointer-events: none !important;
   }
 
   .paper-item-card {
@@ -1525,6 +1513,7 @@ dialog.modal-card::backdrop {
     box-sizing: border-box !important;
     position: relative !important;
     z-index: 20 !important;
+    pointer-events: auto !important;
   }
 
   .book-page-left {

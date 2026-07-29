@@ -162,6 +162,8 @@ class App {
 
     document.addEventListener('mousemove', (e) => this.handleStickerDragMove(e));
     document.addEventListener('mouseup', () => this.handleStickerDragEnd());
+    document.addEventListener('touchmove', (e) => this.handleStickerDragMove(e), { passive: false });
+    document.addEventListener('touchend', () => this.handleStickerDragEnd());
   }
 
   // FLAWLESS DESKTOP MOUSE DRAG AND MOBILE TOUCH SWIPE GESTURES
@@ -204,7 +206,7 @@ class App {
 
     // Mobile Touch Events
     mainContainer.addEventListener('touchstart', (e) => {
-      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || e.target.closest('.draggable-sticker') || e.target.closest('.circular-fab') || e.target.closest('button')) return;
       startSwipe(e.touches[0].clientX, e.touches[0].clientY);
     }, { passive: true });
 
@@ -618,7 +620,7 @@ class App {
 
             <div class="items-list-papers">
               ${leftPageItems.length === 0 ? `
-                <div style="margin: auto 0; padding: 24px; text-align: center; border: 1px dashed var(--border-color); border-radius: 14px; background: rgba(0,0,0,0.01);">
+                <div style="margin: auto 0; padding: 24px; text-align: center; border: 1px dashed var(--border-color); border-radius: 14px; background: rgba(0,0,0,0.01); pointer-events: none;">
                   <div class="washi-tape washi-tape-lavender" style="top: -10px; right: 20px;"></div>
                   <span style="font-size: 26px; display: block; margin-bottom: 6px;">✏️ 🌿</span>
                   <p style="font-size: 13px; font-weight: 600; color: var(--text-main);">Ruled Page ${pageNumLeft}</p>
@@ -650,7 +652,7 @@ class App {
 
             <div class="items-list-papers">
               ${rightPageItems.length === 0 ? `
-                <div style="margin: auto 0; text-align: center; padding: 30px; color: var(--text-muted);">
+                <div style="margin: auto 0; text-align: center; padding: 30px; color: var(--text-muted); pointer-events: none;">
                   <span style="font-size: 28px; display: block; margin-bottom: 6px;">📝</span>
                   <p style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">Page ${pageNumRight} is open</p>
                   <p style="font-size: 12px; color: var(--text-subtle);">Write below or use ✏️ in side tool menu.</p>
@@ -1335,25 +1337,35 @@ class App {
     const w = st.width || 160;
     return `
       <div class="draggable-sticker" id="${st.id}" style="left: ${st.x}%; top: ${st.y}%; width: ${w}px; transform: rotate(${st.rotation}deg);" 
-           onmousedown="window.app.startStickerDrag(event, '${nbId}', '${st.id}')" title="Drag to reposition • Drag bottom-right corner ↘ to resize">
+           onmousedown="window.app.startStickerDrag(event, '${nbId}', '${st.id}')"
+           ontouchstart="window.app.startStickerDrag(event, '${nbId}', '${st.id}')"
+           title="Drag to reposition • Drag bottom-right corner ↘ to resize">
         <button class="sticker-del-btn" onclick="event.stopPropagation(); window.app.deleteSticker('${nbId}', '${st.id}')" title="Delete sticker">✕</button>
-        <img src="${st.url}" class="sticker-img" alt="Pinterest Sticker" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&auto=format&fit=crop&q=80'" />
+        <img src="${st.url}" class="sticker-img" alt="Pinterest Sticker" draggable="false" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&auto=format&fit=crop&q=80'" />
         ${st.caption ? `<div class="sticker-caption">${st.caption}</div>` : ''}
-        <div class="sticker-resize-handle" onmousedown="window.app.startStickerResize(event, '${nbId}', '${st.id}')" title="Drag to resize sticker">↘</div>
+        <div class="sticker-resize-handle" 
+             onmousedown="window.app.startStickerResize(event, '${nbId}', '${st.id}')"
+             ontouchstart="window.app.startStickerResize(event, '${nbId}', '${st.id}')"
+             title="Drag to resize sticker">↘</div>
       </div>
     `;
   }
 
   startStickerDrag(e, nbId, stId) {
     if (e.target.classList.contains('sticker-del-btn') || e.target.classList.contains('sticker-resize-handle')) return;
-    e.preventDefault();
+    if (e.type === 'touchstart') {
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+    }
     const el = document.getElementById(stId);
     if (!el) return;
 
     const parent = el.parentElement;
     const parentRect = parent.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
+    const touch = e.touches ? e.touches[0] : e;
+    const startX = touch.clientX;
+    const startY = touch.clientY;
     const initialLeftPct = parseFloat(el.style.left) || 20;
     const initialTopPct = parseFloat(el.style.top) || 20;
 
@@ -1366,10 +1378,13 @@ class App {
       return;
     }
     if (!this.draggedSticker) return;
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
+    const touch = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+    if (!touch) return;
+
     const { el, parentRect, startX, startY, initialLeftPct, initialTopPct } = this.draggedSticker;
-    const deltaX = e.clientX - startX;
-    const deltaY = e.clientY - startY;
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
     const deltaLeftPct = (deltaX / parentRect.width) * 100;
     const deltaTopPct = (deltaY / parentRect.height) * 100;
     const newLeft = Math.max(2, Math.min(80, initialLeftPct + deltaLeftPct));
@@ -1395,12 +1410,16 @@ class App {
 
   // --- STICKER RESIZING ENGINE ---
   startStickerResize(e, nbId, stId) {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e.type === 'touchstart') {
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+    }
     const el = document.getElementById(stId);
     if (!el) return;
 
-    const startX = e.clientX;
+    const touch = e.touches ? e.touches[0] : e;
+    const startX = touch.clientX;
     const initialWidth = el.offsetWidth;
 
     this.resizingSticker = { nbId, stId, el, startX, initialWidth };
@@ -1408,9 +1427,12 @@ class App {
 
   handleStickerResizeMove(e) {
     if (!this.resizingSticker) return;
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
+    const touch = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+    if (!touch) return;
+
     const { el, startX, initialWidth } = this.resizingSticker;
-    const deltaX = e.clientX - startX;
+    const deltaX = touch.clientX - startX;
     const newWidth = Math.max(70, Math.min(420, initialWidth + deltaX));
     el.style.width = `${newWidth}px`;
   }
