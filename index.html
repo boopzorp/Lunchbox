@@ -104,6 +104,20 @@
         </select>
       </div>
 
+      <div class="palette-item" style="padding: 6px 12px; cursor: default;">
+        <span class="palette-icon">📖</span>
+        <select id="palette-layout-select" aria-label="Inside Spread Layout Mode" onchange="window.app.handleSpreadLayoutChange(this.value)" style="flex: 1; border: none; background: transparent; font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--text-main); outline: none; cursor: pointer;">
+          <option value="balanced">⚖️ Balanced (Both Sides)</option>
+          <option value="text-right">🖼️ Left Art / Right Text</option>
+          <option value="text-left">📝 Left Text / Right Art</option>
+        </select>
+      </div>
+
+      <button class="palette-item" onclick="window.app.handleAddNewPage()" title="Add a Manual Blank Page / Section">
+        <span class="palette-icon">＋</span>
+        <span class="palette-label" style="font-weight: 600;">Add New Page</span>
+      </button>
+
       <button class="palette-item" onclick="window.app.toggleAIDrawer(true)" title="Ask Pippy AI Buddy">
         <span class="palette-icon">🦉</span>
         <span class="palette-label">AI Buddy</span>
@@ -176,6 +190,15 @@
         <select id="edit-nb-show-label" name="showCoverLabel" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-weight: 600;">
           <option value="true">📄 Classic Paper Label Card (White Box)</option>
           <option value="false">🎨 Full Cover Canvas (Hide White Box)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Inside Spread Layout</label>
+        <select id="edit-nb-spread-layout" name="spreadLayout" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-weight: 600;">
+          <option value="balanced">⚖️ Balanced — Dual-Side Text & Stickers (Default 2-Column)</option>
+          <option value="text-right">🖼️ Left Page Pure Art & Stickers / Right Page Text</option>
+          <option value="text-left">📝 Left Page Text / Right Page Pure Art & Stickers</option>
         </select>
       </div>
 
@@ -449,6 +472,14 @@
           <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Spine Text</label>
           <input type="text" name="spineText" value="2026 • LUNCHBOX" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" required />
         </div>
+      </div>
+      <div style="margin-bottom: 14px;">
+        <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Inside Spread Layout</label>
+        <select name="spreadLayout" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); font-weight: 600;">
+          <option value="balanced">⚖️ Balanced — Dual-Side Text & Stickers (Default)</option>
+          <option value="text-right">🖼️ Left Page Pure Art & Stickers / Right Page Text</option>
+          <option value="text-left">📝 Left Page Text / Right Page Pure Art & Stickers</option>
+        </select>
       </div>
       <div style="margin-bottom: 20px;">
         <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Description</label>

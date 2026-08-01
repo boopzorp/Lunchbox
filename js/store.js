@@ -28,6 +28,9 @@ const DEFAULT_DATA = {
       coverColor: 'cream',
       spineText: '2026 • LUNCHBOX',
       pageFormat: 'grid', // 'grid', 'lined', 'dots', 'unruled'
+      spreadLayout: 'balanced', // 'balanced', 'text-right', 'text-left'
+      spreadLayouts: {}, // per-spread layout overrides
+      sections: [{ id: 'sec-default', title: 'Default Section' }],
       description: 'Things you must do today so you can relax tonight!',
       stickers: [
         { id: 'st-1', url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300&auto=format&fit=crop&q=80', spreadIdx: 0, pageSide: 'left', x: 15, y: 20, rotation: -4, caption: 'Vintage Books' }
@@ -69,7 +72,21 @@ class Store {
       } else {
         parsed.notebooks.forEach(nb => {
           if (!nb.pageFormat) nb.pageFormat = 'grid';
+          if (!nb.spreadLayout) nb.spreadLayout = 'balanced';
+          if (!nb.spreadLayouts) nb.spreadLayouts = {};
+          if (!nb.sections || !Array.isArray(nb.sections) || nb.sections.length === 0) {
+            nb.sections = [{ id: 'sec-default', title: 'Default Section' }];
+          }
           if (!nb.stickers) nb.stickers = [];
+          nb.stickers.forEach(st => {
+            if (!st.sectionId) st.sectionId = nb.sections[0].id;
+            if (st.sectionSpreadIdx === undefined) st.sectionSpreadIdx = Math.max(0, (st.spreadIdx || 1) - 1);
+          });
+          if (nb.items) {
+            nb.items.forEach(item => {
+              if (!item.sectionId) item.sectionId = nb.sections[0].id;
+            });
+          }
           if (!nb.spineColor) nb.spineColor = nb.color || 'green';
           if (!nb.coverColor) nb.coverColor = 'cream';
           if (!nb.spineText) nb.spineText = '2026 • LUNCHBOX';
@@ -166,7 +183,7 @@ class Store {
     return (this.data.notebooks || []).find(n => n.id === id);
   }
 
-  addNotebook({ title, icon, color, spineColor, coverColor, spineText, description }) {
+  addNotebook({ title, icon, color, spineColor, coverColor, spineText, spreadLayout, description }) {
     const newNb = {
       id: 'nb-' + Date.now(),
       title,
@@ -176,6 +193,9 @@ class Store {
       coverColor: coverColor || 'cream',
       spineText: spineText || '2026 • LUNCHBOX',
       pageFormat: 'grid',
+      spreadLayout: spreadLayout || 'balanced',
+      spreadLayouts: {},
+      sections: [{ id: 'sec-default', title: 'Default Section' }],
       description: description || 'Packed with thoughts and memories.',
       archived: false,
       stickers: [],
@@ -190,6 +210,15 @@ class Store {
     const nb = this.getNotebook(id);
     if (nb) {
       Object.assign(nb, updates);
+      this.save();
+    }
+  }
+
+  setSpreadLayout(notebookId, spreadIdx, layout) {
+    const nb = this.getNotebook(notebookId);
+    if (nb) {
+      if (!nb.spreadLayouts) nb.spreadLayouts = {};
+      nb.spreadLayouts[spreadIdx] = layout;
       this.save();
     }
   }
@@ -215,7 +244,7 @@ class Store {
     this.save();
   }
 
-  addSticker(notebookId, { url, spreadIdx, pageSide, x, y, width, rotation, caption }) {
+  addSticker(notebookId, { url, spreadIdx, pageSide, x, y, width, rotation, caption, sectionId, sectionSpreadIdx }) {
     const nb = this.getNotebook(notebookId);
     if (!nb) return;
     if (!nb.stickers) nb.stickers = [];
@@ -223,6 +252,8 @@ class Store {
       id: 'st-' + Date.now(),
       url,
       spreadIdx: spreadIdx !== undefined ? spreadIdx : 0,
+      sectionId: sectionId || (nb.sections && nb.sections[0] ? nb.sections[0].id : 'sec-default'),
+      sectionSpreadIdx: sectionSpreadIdx !== undefined ? sectionSpreadIdx : 0,
       pageSide: pageSide || 'right',
       x: x !== undefined ? x : 30,
       y: y !== undefined ? y : 30,
@@ -263,7 +294,7 @@ class Store {
     this.save();
   }
 
-  addItem(notebookId, { title, priority, due, category, notes }) {
+  addItem(notebookId, { title, priority, due, category, notes, sectionId }) {
     const nb = this.getNotebook(notebookId);
     if (!nb) return;
     const newItem = {
@@ -273,7 +304,8 @@ class Store {
       priority: priority || 'medium',
       due: due || 'Today',
       category: category || 'General',
-      notes: notes || ''
+      notes: notes || '',
+      sectionId: sectionId || (nb.sections && nb.sections[0] ? nb.sections[0].id : 'sec-default')
     };
     nb.items.unshift(newItem);
     this.save();

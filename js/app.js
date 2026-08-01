@@ -264,6 +264,153 @@ class App {
     if (window.notificationEngine) window.notificationEngine.playSound('chime');
   }
 
+  getSpreadLayout(nb, spreadIdx) {
+    if (!nb) return 'balanced';
+    if (nb.spreadLayouts && nb.spreadLayouts[spreadIdx]) {
+      return nb.spreadLayouts[spreadIdx];
+    }
+    return nb.spreadLayout || 'balanced';
+  }
+
+  getItemWeight(item) {
+    if (!item) return 1;
+    if (item.notes && item.notes.trim().length > 0) {
+      return 2;
+    }
+    return 1;
+  }
+
+  calculateAllSpreads(nb) {
+    if (!nb) return [];
+    const sections = nb.sections && nb.sections.length > 0 ? nb.sections : [{ id: 'sec-default' }];
+    
+    const allSpreads = [];
+    let overallSpreadIdx = 1;
+
+    sections.forEach((section, secIdx) => {
+      const sectionItems = (nb.items || []).filter(i => (i.sectionId || sections[0].id) === section.id);
+      const activeItems = sectionItems.filter(i => !i.completed);
+      const completedItems = sectionItems.filter(i => i.completed);
+      const sortedItems = [...activeItems, ...completedItems];
+
+      let currentItemIdx = 0;
+      let sectionSpreadIdx = 0;
+
+      const customLayoutKeys = nb.spreadLayouts ? Object.keys(nb.spreadLayouts) : [];
+      let maxCustomSpreadIdx = 0;
+      customLayoutKeys.forEach(k => {
+        if (k.startsWith(`${section.id}-`)) {
+          const idx = parseInt(k.split('-').pop());
+          if (!isNaN(idx) && idx > maxCustomSpreadIdx) maxCustomSpreadIdx = idx;
+        }
+      });
+      const sectionStickers = (nb.stickers || []).filter(s => (s.sectionId || sections[0].id) === section.id);
+      sectionStickers.forEach(st => {
+        if ((st.sectionSpreadIdx || 0) > maxCustomSpreadIdx) {
+          maxCustomSpreadIdx = st.sectionSpreadIdx || 0;
+        }
+      });
+
+      while (currentItemIdx < sortedItems.length || sectionSpreadIdx === 0 || sectionSpreadIdx <= maxCustomSpreadIdx) {
+        const layoutKey = `${section.id}-${sectionSpreadIdx}`;
+        const layoutMode = (nb.spreadLayouts && (nb.spreadLayouts[layoutKey] || nb.spreadLayouts[overallSpreadIdx])) || nb.spreadLayout || 'balanced';
+        const maxSpreadWeight = (layoutMode === 'text-right' || layoutMode === 'text-left') ? 6 : 12;
+
+        let currentSpreadWeight = 0;
+        let sliceEndIdx = currentItemIdx;
+
+        while (sliceEndIdx < sortedItems.length) {
+          const itemWeight = this.getItemWeight(sortedItems[sliceEndIdx]);
+          if (currentSpreadWeight + itemWeight > maxSpreadWeight && sliceEndIdx > currentItemIdx) {
+            break;
+          }
+          currentSpreadWeight += itemWeight;
+          sliceEndIdx++;
+        }
+
+        const spreadItemsSlice = sortedItems.slice(currentItemIdx, sliceEndIdx);
+
+        allSpreads.push({
+          spreadIdx: overallSpreadIdx,
+          sectionId: section.id,
+          sectionIdx: secIdx,
+          sectionSpreadIdx: sectionSpreadIdx,
+          layoutMode: layoutMode,
+          items: spreadItemsSlice,
+          isManualSectionStart: sectionSpreadIdx === 0 && secIdx > 0
+        });
+
+        currentItemIdx = sliceEndIdx;
+        sectionSpreadIdx++;
+        overallSpreadIdx++;
+
+        if (currentItemIdx >= sortedItems.length && sectionSpreadIdx > maxCustomSpreadIdx) {
+          break;
+        }
+      }
+    });
+
+    return allSpreads;
+  }
+
+  getCurrentSpreadDescriptor(nb) {
+    const allSpreads = this.calculateAllSpreads(nb);
+    return allSpreads.find(s => s.spreadIdx === this.currentSpreadIdx) || allSpreads[allSpreads.length - 1] || {
+      spreadIdx: 1,
+      sectionId: (nb.sections && nb.sections[0] ? nb.sections[0].id : 'sec-default'),
+      sectionIdx: 0,
+      sectionSpreadIdx: 0,
+      layoutMode: nb.spreadLayout || 'balanced',
+      items: [],
+      isManualSectionStart: false
+    };
+  }
+
+  handleAddNewPage() {
+    if (this.viewMode === 'shelf' || !this.currentView) return;
+    const nb = window.store.getNotebook(this.currentView);
+    if (!nb) return;
+
+    const allSpreads = this.calculateAllSpreads(nb);
+    const currentSpreadDesc = allSpreads.find(s => s.spreadIdx === this.currentSpreadIdx) || allSpreads[allSpreads.length - 1];
+    
+    const newSection = {
+      id: 'sec-' + Date.now(),
+      title: 'New Section'
+    };
+    
+    if (!nb.sections || nb.sections.length === 0) {
+      nb.sections = [{ id: 'sec-default', title: 'Default Section' }];
+    }
+
+    const currentSecIdx = currentSpreadDesc ? nb.sections.findIndex(sec => sec.id === currentSpreadDesc.sectionId) : (nb.sections.length - 1);
+    const insertIdx = currentSecIdx >= 0 ? currentSecIdx + 1 : nb.sections.length;
+    
+    nb.sections.splice(insertIdx, 0, newSection);
+    window.store.save();
+
+    const updatedSpreads = this.calculateAllSpreads(nb);
+    const newSpreadDesc = updatedSpreads.find(s => s.sectionId === newSection.id && s.sectionSpreadIdx === 0);
+    if (newSpreadDesc) {
+      this.currentSpreadIdx = newSpreadDesc.spreadIdx;
+    }
+
+    this.render();
+    if (window.notificationEngine) {
+      window.notificationEngine.playSound('chime');
+      window.notificationEngine.showToast('📖', 'Manual Page Added', 'A new independent section page was inserted.');
+    }
+  }
+
+  getSpreadItemsAndTotal(nb, targetInsideIdx) {
+    const allSpreads = this.calculateAllSpreads(nb);
+    const desc = allSpreads.find(s => s.spreadIdx === (targetInsideIdx + 1));
+    return {
+      currentSpreadItems: desc ? desc.items : [],
+      totalInsideSpreads: allSpreads.length
+    };
+  }
+
   showShelfView() {
     this.viewMode = 'shelf';
     this.render();
@@ -350,9 +497,13 @@ class App {
     });
 
     const formatSelect = document.getElementById('palette-format-select');
+    const layoutSelect = document.getElementById('palette-layout-select');
     const nb = window.store.getNotebook(nbId);
     if (formatSelect && nb) {
       formatSelect.value = nb.pageFormat || 'grid';
+    }
+    if (layoutSelect && nb) {
+      layoutSelect.value = this.getSpreadLayout(nb, this.currentSpreadIdx);
     }
 
     this.render();
@@ -383,9 +534,9 @@ class App {
     }
     
     this.isFlipping = true;
-    const rightPage = document.getElementById(`page-spread-${this.currentSpreadIdx}-right`);
-    if (rightPage) {
-      rightPage.classList.add('page-flipping-left');
+    const leftPage = document.getElementById(`page-spread-${this.currentSpreadIdx}-left`);
+    if (leftPage) {
+      leftPage.classList.add('page-flipping-left');
     }
 
     if (window.notificationEngine) window.notificationEngine.playSound('chime');
@@ -394,14 +545,15 @@ class App {
       this.currentSpreadIdx--;
       this.renderBookWorkspace();
       this.isFlipping = false;
-    }, 280);
+    }, 360);
   }
 
   nextPage() {
     if (this.isFlipping) return;
     const nb = window.store.getNotebook(this.currentView);
     if (!nb) return;
-    const totalSpreads = Math.max(1, Math.ceil(nb.items.length / 8)) + 1;
+    const allSpreads = this.calculateAllSpreads(nb);
+    const totalSpreads = allSpreads.length + 1;
     if (this.currentSpreadIdx >= totalSpreads - 1) return;
     
     this.isFlipping = true;
@@ -416,12 +568,26 @@ class App {
       this.currentSpreadIdx++;
       this.renderBookWorkspace();
       this.isFlipping = false;
-    }, 280);
+    }, 360);
   }
 
   handleFormatChange(newFormat) {
     if (this.currentView === 'settings' || this.currentView === 'history' || this.viewMode === 'shelf') return;
     window.store.updateNotebook(this.currentView, { pageFormat: newFormat });
+    if (window.notificationEngine) window.notificationEngine.playSound('chime');
+  }
+
+  handleSpreadLayoutChange(newLayout) {
+    if (this.currentView === 'settings' || this.currentView === 'history' || this.viewMode === 'shelf') return;
+    const nb = window.store.getNotebook(this.currentView);
+    if (!nb) return;
+    if (this.currentSpreadIdx === 0) {
+      window.store.updateNotebook(this.currentView, { spreadLayout: newLayout });
+    } else {
+      const desc = this.getCurrentSpreadDescriptor(nb);
+      window.store.setSpreadLayout(this.currentView, `${desc.sectionId}-${desc.sectionSpreadIdx}`, newLayout);
+    }
+    this.render();
     if (window.notificationEngine) window.notificationEngine.playSound('chime');
   }
 
@@ -581,25 +747,60 @@ class App {
       return;
     }
 
+    const allSpreads = this.calculateAllSpreads(activeNb);
+    const totalInsideSpreads = allSpreads.length;
     const insideIdx = this.currentSpreadIdx - 1;
-    
-    // SORTING RULE: Active / Uncompleted items stay on front pages, completed items sink to back archive pages
-    const activeItems = (activeNb.items || []).filter(i => !i.completed);
-    const completedItems = (activeNb.items || []).filter(i => i.completed);
-    const sortedItems = [...activeItems, ...completedItems];
+    const desc = allSpreads.find(s => s.spreadIdx === this.currentSpreadIdx) || allSpreads[0] || {
+      sectionId: 'sec-default',
+      sectionSpreadIdx: 0,
+      layoutMode: activeNb.spreadLayout || 'balanced',
+      items: []
+    };
+    const layoutMode = desc.layoutMode;
+    const currentSpreadItems = desc.items;
 
-    const totalInsideSpreads = Math.max(1, Math.ceil(sortedItems.length / 8));
-    if (insideIdx >= totalInsideSpreads) this.currentSpreadIdx = totalInsideSpreads;
+    let leftPageItems = [];
+    let rightPageItems = [];
+    if (layoutMode === 'text-right') {
+      leftPageItems = []; // Pure sticker side
+      rightPageItems = currentSpreadItems;
+    } else if (layoutMode === 'text-left') {
+      leftPageItems = currentSpreadItems;
+      rightPageItems = []; // Pure sticker side
+    } else {
+      let leftWeight = 0;
+      const totalWeight = currentSpreadItems.reduce((sum, item) => sum + this.getItemWeight(item), 0);
+      const targetLeftWeight = Math.ceil(totalWeight / 2);
+      let splitIdx = 0;
+      while (splitIdx < currentSpreadItems.length && leftWeight < targetLeftWeight) {
+        leftWeight += this.getItemWeight(currentSpreadItems[splitIdx]);
+        splitIdx++;
+      }
+      if (splitIdx === 0 && currentSpreadItems.length > 0) splitIdx = 1;
+      leftPageItems = currentSpreadItems.slice(0, splitIdx);
+      rightPageItems = currentSpreadItems.slice(splitIdx);
+    }
 
-    const currentSpreadItems = sortedItems.slice(insideIdx * 8, (insideIdx + 1) * 8);
-    const leftPageItems = currentSpreadItems.slice(0, 4);
-    const rightPageItems = currentSpreadItems.slice(4, 8);
+    const layoutSelect = document.getElementById('palette-layout-select');
+    if (layoutSelect) {
+      layoutSelect.value = layoutMode;
+    }
 
     const pageNumLeft = (insideIdx * 2) + 1;
     const pageNumRight = (insideIdx * 2) + 2;
 
-    const leftStickers = (activeNb.stickers || []).filter(s => s.spreadIdx === this.currentSpreadIdx && s.pageSide === 'left');
-    const rightStickers = (activeNb.stickers || []).filter(s => s.spreadIdx === this.currentSpreadIdx && s.pageSide === 'right');
+    const leftStickers = (activeNb.stickers || []).filter(s => {
+      if (s.sectionId) {
+        return s.sectionId === desc.sectionId && (s.sectionSpreadIdx || 0) === desc.sectionSpreadIdx && s.pageSide === 'left';
+      }
+      return s.spreadIdx === this.currentSpreadIdx && s.pageSide === 'left';
+    });
+    const rightStickers = (activeNb.stickers || []).filter(s => {
+      if (s.sectionId) {
+        return s.sectionId === desc.sectionId && (s.sectionSpreadIdx || 0) === desc.sectionSpreadIdx && s.pageSide === 'right';
+      }
+      return s.spreadIdx === this.currentSpreadIdx && s.pageSide === 'right';
+    });
 
     container.innerHTML = `
       <div class="papers-book-wrapper">
@@ -607,7 +808,7 @@ class App {
         <div class="papers-book">
           
           <!-- LEFT INSIDE PAGE -->
-          <div class="book-page book-page-left ${formatClass}" id="page-spread-${this.currentSpreadIdx}-left" style="position: relative;">
+          <div class="book-page book-page-left ${formatClass}" id="page-spread-${this.currentSpreadIdx}-left" style="position: relative;" role="region" aria-label="Page ${pageNumLeft} ${layoutMode === 'text-right' ? 'Sticker Canvas' : 'Checklist'}">
             ${leftStickers.map(st => this.renderStickerHTML(activeNb.id, st)).join('')}
             
             <div style="margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
@@ -619,17 +820,42 @@ class App {
             </div>
 
             <div class="items-list-papers">
-              ${leftPageItems.length === 0 ? `
-                <div style="margin: auto 0; padding: 24px; text-align: center; border: 1px dashed var(--border-color); border-radius: 14px; background: rgba(0,0,0,0.01); pointer-events: none;">
-                  <div class="washi-tape washi-tape-lavender" style="top: -10px; right: 20px;"></div>
-                  <span style="font-size: 26px; display: block; margin-bottom: 6px;">✏️ 🌿</span>
-                  <p style="font-size: 13px; font-weight: 600; color: var(--text-main);">Ruled Page ${pageNumLeft}</p>
-                  <p style="font-size: 11.5px; color: var(--text-subtle);">Active items sit on front pages. Actioned-off items automatically move to back archive pages!</p>
-                </div>
-              ` : `
-                ${leftPageItems.map((item, i) => this.renderPaperCard(activeNb.id, item, i === 0 ? 'yellow' : null)).join('')}
-              `}
+              ${layoutMode === 'text-right' ? (
+                leftStickers.length === 0 ? `
+                  <div class="sticker-canvas-placeholder" style="margin: auto; padding: 28px 18px; text-align: center; border: 2px dashed var(--border-color); border-radius: 16px; background: var(--bg-surface); box-shadow: var(--shadow-sm); max-width: 260px; position: relative; pointer-events: auto;">
+                    <div class="washi-tape washi-tape-lavender" style="top: -10px; right: 20px;"></div>
+                    <span style="font-size: 34px; display: block; margin-bottom: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.08));">🖼️ ✨</span>
+                    <h4 style="font-family: var(--font-brand); font-size: 17px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">Visual Sticker Canvas</h4>
+                    <p style="font-size: 12px; line-height: 1.4; color: var(--text-muted); margin-bottom: 16px;">Page ${pageNumLeft} is reserved purely for your photo stickers, polaroids, and creative collage art.</p>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); window.app.openAddStickerModal('left')" style="border-radius: 20px; font-weight: 700; font-size: 12px; padding: 6px 14px;">＋ Place First Sticker</button>
+                  </div>
+                ` : `
+                  <div style="margin: auto; text-align: center; opacity: 0.15; pointer-events: none;">
+                    <span style="font-size: 48px; display: block;">🖼️</span>
+                    <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">Visual Page ${pageNumLeft}</span>
+                  </div>
+                `
+              ) : (
+                leftPageItems.length === 0 ? `
+                  <div style="margin: auto 0; padding: 24px; text-align: center; border: 1px dashed var(--border-color); border-radius: 14px; background: rgba(0,0,0,0.01); pointer-events: none;">
+                    <div class="washi-tape washi-tape-lavender" style="top: -10px; right: 20px;"></div>
+                    <span style="font-size: 26px; display: block; margin-bottom: 6px;">✏️ 🌿</span>
+                    <p style="font-size: 13px; font-weight: 600; color: var(--text-main);">Ruled Page ${pageNumLeft}</p>
+                    <p style="font-size: 11.5px; color: var(--text-subtle);">Active items sit on front pages. Actioned-off items automatically move to back archive pages!</p>
+                  </div>
+                ` : `
+                  ${leftPageItems.map((item, i) => this.renderPaperCard(activeNb.id, item, i === 0 ? 'yellow' : null)).join('')}
+                `
+              )}
             </div>
+
+            ${layoutMode === 'text-left' ? `
+              <form class="paper-line-input" onsubmit="window.app.quickAddItem(event, '${activeNb.id}')">
+                <span class="pencil-prompt" title="Write a reminder">✏️</span>
+                <input type="text" name="quickTitle" class="paper-input-field" placeholder="Write on page ${pageNumLeft}..." required autocomplete="off" />
+                <button type="submit" class="paper-submit-btn" title="Add item to page">↵ Add</button>
+              </form>
+            ` : ''}
 
             <div class="page-curl page-curl-left" onclick="window.app.prevPage()" title="Turn to previous page (or swipe right)">
               <span class="page-curl-hint">◀ P. ${pageNumLeft - 1}</span>
@@ -642,31 +868,60 @@ class App {
           </div>
 
           <!-- RIGHT INSIDE PAGE -->
-          <div class="book-page book-page-right ${formatClass}" id="page-spread-${this.currentSpreadIdx}-right" style="position: relative;">
+          <div class="book-page book-page-right ${formatClass}" id="page-spread-${this.currentSpreadIdx}-right" style="position: relative;" role="region" aria-label="Page ${pageNumRight} ${layoutMode === 'text-left' ? 'Sticker Canvas' : 'Checklist'}">
             ${rightStickers.map(st => this.renderStickerHTML(activeNb.id, st)).join('')}
             
             <div style="margin-bottom: 16px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">Checklist P. ${pageNumRight}</span>
-              <span style="font-size: 11px; color: var(--text-subtle);">(${insideIdx + 1}/${totalInsideSpreads})</span>
+              <span style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">${layoutMode === 'text-left' ? 'Visual Art Canvas' : 'Checklist'} P. ${pageNumRight}</span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <button type="button" onclick="window.app.handleAddNewPage()" class="btn btn-sm btn-outline" style="border-radius: 14px; padding: 2px 8px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px;" title="Add a manual blank page after this section">
+                  <span>＋</span> New Page
+                </button>
+                <select aria-label="Spread Layout for Page ${pageNumLeft}-${pageNumRight}" onchange="window.app.handleSpreadLayoutChange(this.value)" style="border: 1px solid var(--border-color); background: var(--bg-surface); font-family: var(--font-body); font-size: 11px; font-weight: 700; color: var(--text-main); border-radius: 14px; padding: 2px 8px; outline: none; cursor: pointer;" title="Customize layout for this specific spread">
+                  <option value="balanced" ${layoutMode === 'balanced' ? 'selected' : ''}>⚖️ Balanced</option>
+                  <option value="text-right" ${layoutMode === 'text-right' ? 'selected' : ''}>🖼️ Art Left / Text Right</option>
+                  <option value="text-left" ${layoutMode === 'text-left' ? 'selected' : ''}>📝 Text Left / Art Right</option>
+                </select>
+                <span style="font-size: 11px; color: var(--text-subtle);">(${insideIdx + 1}/${totalInsideSpreads})</span>
+              </div>
             </div>
 
             <div class="items-list-papers">
-              ${rightPageItems.length === 0 ? `
-                <div style="margin: auto 0; text-align: center; padding: 30px; color: var(--text-muted); pointer-events: none;">
-                  <span style="font-size: 28px; display: block; margin-bottom: 6px;">📝</span>
-                  <p style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">Page ${pageNumRight} is open</p>
-                  <p style="font-size: 12px; color: var(--text-subtle);">Write below or use ✏️ in side tool menu.</p>
-                </div>
-              ` : `
-                ${rightPageItems.map((item, i) => this.renderPaperCard(activeNb.id, item, i === 0 ? 'mint' : null)).join('')}
-              `}
+              ${layoutMode === 'text-left' ? (
+                rightStickers.length === 0 ? `
+                  <div class="sticker-canvas-placeholder" style="margin: auto; padding: 28px 18px; text-align: center; border: 2px dashed var(--border-color); border-radius: 16px; background: var(--bg-surface); box-shadow: var(--shadow-sm); max-width: 260px; position: relative; pointer-events: auto;">
+                    <div class="washi-tape washi-tape-mint" style="top: -10px; right: 20px;"></div>
+                    <span style="font-size: 34px; display: block; margin-bottom: 8px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.08));">🎨 ✨</span>
+                    <h4 style="font-family: var(--font-brand); font-size: 17px; font-weight: 800; color: var(--text-main); margin-bottom: 6px;">Visual Sticker Canvas</h4>
+                    <p style="font-size: 12px; line-height: 1.4; color: var(--text-muted); margin-bottom: 16px;">Page ${pageNumRight} is dedicated purely to photo stickers, polaroids, and creative collage art.</p>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="event.stopPropagation(); window.app.openAddStickerModal('right')" style="border-radius: 20px; font-weight: 700; font-size: 12px; padding: 6px 14px;">＋ Place First Sticker</button>
+                  </div>
+                ` : `
+                  <div style="margin: auto; text-align: center; opacity: 0.15; pointer-events: none;">
+                    <span style="font-size: 48px; display: block;">🎨</span>
+                    <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">Visual Page ${pageNumRight}</span>
+                  </div>
+                `
+              ) : (
+                rightPageItems.length === 0 ? `
+                  <div style="margin: auto 0; text-align: center; padding: 30px; color: var(--text-muted); pointer-events: none;">
+                    <span style="font-size: 28px; display: block; margin-bottom: 6px;">📝</span>
+                    <p style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">Page ${pageNumRight} is open</p>
+                    <p style="font-size: 12px; color: var(--text-subtle);">Write below or use ✏️ in side tool menu.</p>
+                  </div>
+                ` : `
+                  ${rightPageItems.map((item, i) => this.renderPaperCard(activeNb.id, item, i === 0 ? 'mint' : null)).join('')}
+                `
+              )}
             </div>
 
-            <form class="paper-line-input" onsubmit="window.app.quickAddItem(event, '${activeNb.id}')">
-              <span class="pencil-prompt" title="Write a reminder">✏️</span>
-              <input type="text" name="quickTitle" class="paper-input-field" placeholder="Write on page ${pageNumRight}..." required autocomplete="off" />
-              <button type="submit" class="paper-submit-btn" title="Add item to page">↵ Add</button>
-            </form>
+            ${layoutMode !== 'text-left' ? `
+              <form class="paper-line-input" onsubmit="window.app.quickAddItem(event, '${activeNb.id}')">
+                <span class="pencil-prompt" title="Write a reminder">✏️</span>
+                <input type="text" name="quickTitle" class="paper-input-field" placeholder="Write on page ${pageNumRight}..." required autocomplete="off" />
+                <button type="submit" class="paper-submit-btn" title="Add item to page">↵ Add</button>
+              </form>
+            ` : ''}
 
             ${insideIdx < totalInsideSpreads - 1 ? `
               <div class="page-curl page-curl-right" onclick="window.app.nextPage()" title="Turn to next page (or swipe left)">
@@ -1486,6 +1741,7 @@ class App {
     const spineColor = formData.get('spineColor') || 'green';
     const coverColor = formData.get('coverColor') || 'cream';
     const spineText = formData.get('spineText') || '2026 • LUNCHBOX';
+    const spreadLayout = formData.get('spreadLayout') || 'balanced';
     const description = formData.get('description') || 'Packed with thoughts and memories.';
 
     if (!title) return;
@@ -1497,6 +1753,7 @@ class App {
       spineColor,
       coverColor,
       spineText,
+      spreadLayout,
       description
     });
 
@@ -1528,6 +1785,7 @@ class App {
     document.getElementById('edit-nb-cover-font').value = nb.coverFont || 'Inter';
     document.getElementById('edit-nb-cover-text-color').value = nb.coverTextColor || '#1E293B';
     document.getElementById('edit-nb-spine-text').value = nb.spineText || '2026 • LUNCHBOX';
+    document.getElementById('edit-nb-spread-layout').value = nb.spreadLayout || 'balanced';
     document.getElementById('edit-nb-desc').value = nb.description || '';
 
     modal.showModal();
@@ -1544,6 +1802,7 @@ class App {
     const coverFont = formData.get('coverFont');
     const coverTextColor = formData.get('coverTextColor');
     const spineText = formData.get('spineText');
+    const spreadLayout = formData.get('spreadLayout') || 'balanced';
     const description = formData.get('description');
 
     if (!id || !title) return;
@@ -1559,6 +1818,7 @@ class App {
       coverFont,
       coverTextColor,
       spineText,
+      spreadLayout,
       description
     });
 
@@ -1567,13 +1827,24 @@ class App {
     if (window.notificationEngine) window.notificationEngine.playSound('chime');
   }
 
-  openAddStickerModal() {
+  openAddStickerModal(targetSide = '') {
     if (this.viewMode === 'shelf') {
       window.appModal.alert("Please open a sketchbook from the carousel before adding a sticker!", "Open a Sketchbook", "🖼️");
       return;
     }
     const modal = document.getElementById('add-sticker-modal');
     if (modal) {
+      const pageSideSelect = modal.querySelector('select[name="pageSide"]');
+      if (pageSideSelect) {
+        if (targetSide === 'left' || targetSide === 'right') {
+          pageSideSelect.value = targetSide;
+        } else {
+          const nb = window.store.getNotebook(this.currentView);
+          const currentLayout = nb ? this.getSpreadLayout(nb, this.currentSpreadIdx) : 'balanced';
+          if (currentLayout === 'text-right') pageSideSelect.value = 'left';
+          if (currentLayout === 'text-left') pageSideSelect.value = 'right';
+        }
+      }
       document.getElementById('sticker-url-input')?.focus();
       modal.showModal();
     }
@@ -1586,9 +1857,13 @@ class App {
     const caption = formData.get('caption');
     if (!url) return;
 
+    const desc = this.getCurrentSpreadDescriptor(window.store.getNotebook(this.currentView));
+
     window.store.addSticker(this.currentView, {
       url,
       spreadIdx: this.currentSpreadIdx,
+      sectionId: desc ? desc.sectionId : undefined,
+      sectionSpreadIdx: desc ? desc.sectionSpreadIdx : 0,
       pageSide,
       x: Math.round(20 + Math.random() * 40),
       y: Math.round(20 + Math.random() * 40),
@@ -1683,12 +1958,15 @@ class App {
     const input = e.target.querySelector('input[name="quickTitle"]');
     if (!input || !input.value.trim()) return;
 
+    const desc = this.getCurrentSpreadDescriptor(window.store.getNotebook(nbId));
+
     window.store.addItem(nbId, {
       title: input.value.trim(),
       priority: 'medium',
       due: 'Today',
       category: 'Quick Pack',
-      notes: ''
+      notes: '',
+      sectionId: desc ? desc.sectionId : undefined
     });
 
     input.value = '';
@@ -1725,7 +2003,9 @@ class App {
     const notes = formData.get('notes');
     if (!title || !nbId) return;
 
-    window.store.addItem(nbId, { title, priority, due, category, notes });
+    const desc = this.getCurrentSpreadDescriptor(window.store.getNotebook(nbId));
+
+    window.store.addItem(nbId, { title, priority, due, category, notes, sectionId: desc ? desc.sectionId : undefined });
     document.getElementById('new-item-modal')?.close();
     document.getElementById('new-item-form')?.reset();
     if (window.notificationEngine) window.notificationEngine.playSound('chime');

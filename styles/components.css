@@ -676,27 +676,29 @@ dialog.modal-card::backdrop {
 
 /* --- 6. 3D PAGE FLIP ANIMATIONS --- */
 @keyframes flip-page-forward {
-  0% { transform: rotateY(0deg); box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-  50% { transform: rotateY(-90deg); box-shadow: -20px 0 40px rgba(0,0,0,0.25); }
-  100% { transform: rotateY(-180deg); box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  0% { transform: perspective(1400px) rotateY(0deg); box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+  50% { transform: perspective(1400px) rotateY(-90deg); box-shadow: -25px 0 45px rgba(0,0,0,0.25); }
+  100% { transform: perspective(1400px) rotateY(-180deg); box-shadow: 0 0 10px rgba(0,0,0,0.05); }
 }
 
 @keyframes flip-page-backward {
-  0% { transform: rotateY(-180deg); box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-  50% { transform: rotateY(-90deg); box-shadow: 20px 0 40px rgba(0,0,0,0.25); }
-  100% { transform: rotateY(0deg); box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+  0% { transform: perspective(1400px) rotateY(0deg); box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+  50% { transform: perspective(1400px) rotateY(90deg); box-shadow: 25px 0 45px rgba(0,0,0,0.25); }
+  100% { transform: perspective(1400px) rotateY(180deg); box-shadow: 0 0 10px rgba(0,0,0,0.05); }
 }
 
 .page-flipping-right {
-  animation: flip-page-forward 0.5s cubic-bezier(0.64, 0, 0.78, 0) forwards;
+  animation: flip-page-forward 0.42s cubic-bezier(0.64, 0, 0.78, 0) forwards;
   transform-origin: left center;
   z-index: 100;
+  backface-visibility: hidden;
 }
 
 .page-flipping-left {
-  animation: flip-page-backward 0.5s cubic-bezier(0.64, 0, 0.78, 0) forwards;
+  animation: flip-page-backward 0.42s cubic-bezier(0.64, 0, 0.78, 0) forwards;
   transform-origin: right center;
   z-index: 100;
+  backface-visibility: hidden;
 }
 
 .book-cloth-spine {
